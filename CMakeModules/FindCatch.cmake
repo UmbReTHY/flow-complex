@@ -1,0 +1,28 @@
+# - Find catch, the header-only testing library
+# This module defines
+#  CATCH_INCLUDE_DIR, where to find catch.hpp, etc.
+#  CATCH_FOUND, If false, do not try to use Catch.
+
+FIND_PATH(CATCH_INCLUDE_DIR catch.hpp)
+
+IF (CATCH_INCLUDE_DIR)
+    SET(CATCH_FOUND "YES")
+ELSE (CATCH_INCLUDE_DIR)
+  SET(CATCH_FOUND "NO")
+ENDIF (CATCH_INCLUDE_DIR)
+
+
+IF (CATCH_FOUND)
+   IF (NOT CATCH_FIND_QUIETLY)
+      MESSAGE(STATUS "Found Catch: ${CATCH_INCLUDE_DIR}")
+   ENDIF (NOT CATCH_FIND_QUIETLY)
+ELSE (CATCH_FOUND)
+   IF (CATCH_FIND_REQUIRED)
+      MESSAGE(FATAL_ERROR "Could not find Catch library")
+   ENDIF (CATCH_FIND_REQUIRED)
+ENDIF (CATCH_FOUND)
+
+MARK_AS_ADVANCED(
+  CATCH_INCLUDE_DIR
+  )
+
