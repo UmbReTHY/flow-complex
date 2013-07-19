@@ -1,5 +1,3 @@
-#include <cassert>
-#include <cstdlib>
 #include <cstdint>
 
 #include <iterator>
@@ -7,9 +5,10 @@
 #include <random>
 #include <vector>
 
-#include <catch.hpp>
-
 #include "point_cloud.hpp"
+
+#define CATCH_CONFIG_MAIN
+#include <catch.hpp>
 
 using number_type = double;
 using dim_type = std::uint8_t;
@@ -26,7 +25,7 @@ bool is_equal(fc_point const& a, fc_point const& b,
   return true;
 }
 
-int main(int, char**) {
+TEST_CASE ("point_cloud" , "test the interface of class point_cloud") {
   // initialize random distributions
   std::random_device rd;  // provides the seed
   std::mt19937 gen(rd());  // random number generator
@@ -49,26 +48,29 @@ int main(int, char**) {
   using point_cloud_type = FC::point_cloud<number_type, dim_type, size_type>;
   point_cloud_type pc(DIM, points.cbegin(), points.cend());
 
-  // 1) check for correct constructor/assignment behavior
-  assert(!std::is_default_constructible<point_cloud_type>::value);
-  assert(!std::is_copy_constructible<point_cloud_type>::value);
-  assert(!std::is_move_constructible<point_cloud_type>::value);
-  assert(!std::is_copy_assignable<point_cloud_type>::value);
-  assert(!std::is_move_assignable<point_cloud_type>::value);
+  SECTION ("ctor/asgn", "check for correct constructor/assignment behavior") {
+    REQUIRE (!std::is_default_constructible<point_cloud_type>::value);
+    REQUIRE (!std::is_copy_constructible<point_cloud_type>::value);
+    REQUIRE (!std::is_move_constructible<point_cloud_type>::value);
+    REQUIRE (!std::is_copy_assignable<point_cloud_type>::value);
+    REQUIRE (!std::is_move_assignable<point_cloud_type>::value);
+  }
 
-  // 2) check begin, end
-  assert(NUM_PTS == static_cast<size_type>(std::distance(pc.begin(), pc.end())));
-  auto point_it = points.cbegin();
-  for (auto && p : pc)
-    assert(is_equal(p, fc_point(point_it++->data()), DIM));
+  SECTION ("begin, end", "check for range-based for-loop compatibility") {
+    REQUIRE (NUM_PTS == static_cast<size_type>(std::distance(pc.begin(), pc.end())));
+    auto point_it = points.cbegin();
+    for (auto && p : pc)
+      REQUIRE (is_equal(p, fc_point(point_it++->data()), DIM));
+  }
 
-  // 3) check indexing operator
-  for (size_type i = 0; i < NUM_PTS; ++i)
-    assert(is_equal(pc[i], fc_point(points[i].data()), DIM));
-
-	// 4) check dim() and size()
-  assert(DIM  == pc.dim());
-  assert(NUM_PTS == pc.size());
-
-  std::exit(EXIT_SUCCESS);
+  SECTION ("idx-op", "correct behavior of idx-operator") {
+    for (size_type i = 0; i < NUM_PTS; ++i)
+      REQUIRE (is_equal(pc[i], fc_point(points[i].data()), DIM));
+  }
+  
+  SECTION ("dim/size", "check dim and size getters") {
+    REQUIRE (DIM  == pc.dim());
+    REQUIRE (NUM_PTS == pc.size());
+  }
 }
+
