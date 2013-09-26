@@ -4,38 +4,12 @@
 #include <cassert>
 
 #include <iterator>
+#include <limits>
 #include <vector>
 
+#include <Eigen/Dense>
+
 namespace FC {
-
-/**
-  @brief lightweight wrapper class around existing data
-         An instance of this class does not claim ownership of the data that it
-         has been given a pointer to.
-         It also does not remain the size of the point. Hence,
-         out-of-bounce-indexing is not checked.
-*/
-template <typename _number_type>
-class point {
-  public:
-    typedef _number_type number_type;
-
-    point(number_type const* data) : _data(data) {
-      assert(data && "POINTER 'data' IS NULL-POINTER");
-    }
-
-    number_type const* data() const {
-      return _data;
-    }
-
-    template <typename dim_type>
-    number_type operator[](dim_type idx) const noexcept {
-      return _data[idx];
-    }
-
-  private:
-    number_type const* _data;
-};
 
 template <typename _number_type, typename _dim_type, typename _size_type>
 class point_cloud {
@@ -43,10 +17,9 @@ class point_cloud {
     typedef _number_type number_type;
     typedef _dim_type dim_type;
     typedef _size_type size_type;
-    typedef point<number_type> point_type;
 
   private:
-    using point_container = std::vector<point_type>;    
+    using point_container = std::vector<_number_type const*>;
 
   public:
     typedef typename point_container::const_iterator const_iterator;
@@ -63,7 +36,7 @@ class point_cloud {
       : _dim(dim) {
       _points.reserve(std::distance(begin, end));
       for (;begin != end; ++begin)
-        _points.push_back(point_type(&(*begin)[0]));
+        _points.push_back(&(*begin)[0]);
     }
 
     point_cloud() = delete;
@@ -83,7 +56,7 @@ class point_cloud {
     /**
       @param idx idx of the point within the point cloud
     */
-    point_type const& operator[](size_type const idx) const noexcept {
+    number_type const* operator[](size_type const idx) const noexcept {
       return _points[idx];
     }
 
@@ -94,8 +67,38 @@ class point_cloud {
     size_type size() const {
       return _points.size();
     }
+    
+    /**
+      @return the indices of the nearest neighbors to q
+    */
+    std::vector<size_type> nearest_neighbors(number_type const* q) {
+      std::vector<size_type> nn;
+
+      if (_points.size() > 0) {
+        number_type min_dist = squared_distance(q, _points[0], _dim);
+        nn.push_back(0);
+        for (i = 1; i < _points.size(); ++i) {
+          number_type const dist = squared_distance(q, _points[i], _dim);
+          if (dist < min_dist) {
+            nn.resize(1);
+            nn.front() = i;
+            min_dist = dist;
+          } else if (dist == min_dist) {
+            nn.push_back(i);
+          }
+        }
+      }
+      
+      return std::move(nn);
+    }
 
   private:
+    number_type squared_distance(number_type const* a, number_type const* b,
+                                 dim_type dim) {
+      using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
+      return (Eigen::Map<const eigen_vector>(a, dim) -
+              Eigen::Map<const eigen_vector>(b, dim)).squaredNorm();
+    }
 
     dim_type const _dim;
     point_container _points;
