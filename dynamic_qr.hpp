@@ -1,46 +1,82 @@
 #ifndef DYNAMIC_QR_HPP_
 #define DYNAMIC_QR_HPP_
 
-#include <cstddef>
+#include <cassert>
 
 #include <Eigen/Dense>
 
-namespace FC {
+namespace fc {
 
-template <typename _number_type>
+template <typename _number_type, typename _size_type>
 class dynamic_qr {
+  using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
+
   public:
     typedef _number_type number_type;
+    typedef _size_type size_type;
     
-    template <typename dim_type>
-    dynamic_qr(dim_type dim)
-      : _A(dim, 0) {
+    dynamic_qr(size_type num_rows)
+      : _A(num_rows, 0) {
+      assert(num_rows > 0);
     }
     
-    std::size_t num_rows() const noexcept {
+    size_type num_rows() const noexcept {
       return _A.rows();
     }
     
-    std::size_t num_cols() const noexcept {
+    size_type num_cols() const noexcept {
       return _A.cols();
     }
     
     void append_column(number_type const* col) {
+      assert(num_cols() < num_rows());
+      _A.conservativeResize(num_rows(), num_cols() + 1);
+      _A.rightCols(1) = Eigen::Map<const eigen_vector>(col, num_rows());
     }
     
     template <typename idx_type>
-    void delete_column(idx_type pos) {
+    void delete_column(idx_type const pos) {
+      assert(pos >= 0);
+      assert(pos < num_cols());
+      if (pos != num_cols() - 1) {
+        auto const num_cols = num_cols() - pos - 1;
+        _A.block(0, pos, num_rows(), num_cols) =
+        _A.block(0, pos + 1, num_rows(), num_cols);
+      }
+      _A.conservativeResize(num_rows(), num_cols() - 1);
     }
     
-    void rank_one_update() {
+    /**
+      @brief updates the QR decomposition for A + u * v^T
+    */
+    template <class DerivedVector1,
+              class DerivedVector2>
+    void rankOne_update (Eigen::MatrixBase<DerivedVector1> const& u,
+                         Eigen::MatrixBase<DerivedVector2> const& v) {
+      static_assert(DerivedVector1::ColsAtCompileTime == 1,
+                    "u needs to be a column vector");
+      static_assert(DerivedVector2::ColsAtCompileTime == 1,
+                    "v needs to be a column vector");
+      assert(u.rows() == num_rows());
+      assert(v.rows() == num_cols());
+      _A += u * v.transpose();
+    }
+    
+        /**
+      @brief finds the least-sqaures solution to QR * x = b
+    */
+    void solve(number_type const* b, number_type * x) const {
+      Eigen::Map<eigen_vector> x_map(x, num_rows());
+      Eigen::Map<const eigen_vector> b_map(b, num_rows());
+      x_map = _A.householderQr().solve(b_map);
     }
     
   private:
+    // TODO not efficient yet
     Eigen::Matrix<number_type, Eigen::Dynamic, Eigen::Dynamic> _A;
-    
 };
 
-}  // namespace FC
+}  // namespace fc
 
 #endif  // DYNAMIC_QR_HPP_
 

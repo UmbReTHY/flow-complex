@@ -77,7 +77,7 @@ class point_cloud {
       if (_points.size() > 0) {
         number_type min_dist = squared_distance(q, _points[0], _dim);
         nn.push_back(0);
-        for (i = 1; i < _points.size(); ++i) {
+        for (size_type i = 1; i < _points.size(); ++i) {
           number_type const dist = squared_distance(q, _points[i], _dim);
           if (dist < min_dist) {
             nn.resize(1);

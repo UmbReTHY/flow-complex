@@ -25,8 +25,11 @@ class affine_hull {
     
     void add_point(size_type const idx) {
       assert(!is_member(idx));
+      if (size() > 0) {
+        // TODO append qr-dolumn
+      }
       _members.push_back(idx);
-      // TODO append qr-dolumn
+      
     }
     
     void drop_point(size_type const idx) {

@@ -7,3 +7,4 @@ macro (do_test arg)
 endmacro (do_test)
 
 do_test(point_cloud)
+do_test(dynamic_qr)
