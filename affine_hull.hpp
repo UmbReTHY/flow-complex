@@ -26,11 +26,18 @@ class affine_hull {
     void add_point(size_type const idx) {
       assert(!is_member(idx));
       _members.push_back(idx);
+      // TODO append qr-dolumn
     }
     
     void drop_point(size_type const idx) {
       assert(is_member(idx));
       auto it = std::find(_members.begin(), _members.end(), idx);
+      if (_members.begin() == it && _members.size() > 1) {
+        // TODO rank-1 update
+      } else if (_members.size() > 1) {
+        // TODO regular column drop
+      }
+      
       _members.erase(it);
     }
     
@@ -47,6 +54,14 @@ class affine_hull {
     
     const_iterator end() const {
       return _members.end();
+    }
+    
+    /**
+      @brief project x onto the affine hull
+      @param lambda pointer to the vector of projection coefficients
+    */
+    void project(number_type const* x, number_type * lambda) {
+      // TODO
     }
   
   private:
