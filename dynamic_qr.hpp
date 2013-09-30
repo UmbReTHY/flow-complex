@@ -10,6 +10,7 @@ namespace fc {
 template <typename _number_type, typename _size_type>
 class dynamic_qr {
   using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
+  using eigen_matrix = Eigen::Matrix<_number_type, Eigen::Dynamic, Eigen::Dynamic>;
 
   public:
     typedef _number_type number_type;
@@ -30,7 +31,11 @@ class dynamic_qr {
     
     void append_column(number_type const* col) {
       assert(num_cols() < num_rows());
-      _A.conservativeResize(num_rows(), num_cols() + 1);
+      // TODO seems buggy, check that
+//      _A.conservativeResize(num_rows(), num_cols() + 1);
+      eigen_matrix const tmp = _A;
+      _A.resize(num_rows(), num_cols() + 1);
+      _A.leftCols(num_cols() - 1) = tmp;
       _A.rightCols(1) = Eigen::Map<const eigen_vector>(col, num_rows());
     }
     
@@ -39,9 +44,9 @@ class dynamic_qr {
       assert(pos >= 0);
       assert(pos < num_cols());
       if (pos != num_cols() - 1) {
-        auto const num_cols = num_cols() - pos - 1;
-        _A.block(0, pos, num_rows(), num_cols) =
-        _A.block(0, pos + 1, num_rows(), num_cols);
+        auto const num_cols_to_move = num_cols() - pos - 1;
+        _A.block(0, pos, num_rows(), num_cols_to_move) =
+        _A.block(0, pos + 1, num_rows(), num_cols_to_move);
       }
       _A.conservativeResize(num_rows(), num_cols() - 1);
     }
@@ -51,7 +56,7 @@ class dynamic_qr {
     */
     template <class DerivedVector1,
               class DerivedVector2>
-    void rankOne_update (Eigen::MatrixBase<DerivedVector1> const& u,
+    void rank_one_update (Eigen::MatrixBase<DerivedVector1> const& u,
                          Eigen::MatrixBase<DerivedVector2> const& v) {
       static_assert(DerivedVector1::ColsAtCompileTime == 1,
                     "u needs to be a column vector");
@@ -62,11 +67,12 @@ class dynamic_qr {
       _A += u * v.transpose();
     }
     
-        /**
+     /**
       @brief finds the least-sqaures solution to QR * x = b
     */
     void solve(number_type const* b, number_type * x) const {
-      Eigen::Map<eigen_vector> x_map(x, num_rows());
+      assert(num_cols() > 0);
+      Eigen::Map<eigen_vector> x_map(x, num_cols());
       Eigen::Map<const eigen_vector> b_map(b, num_rows());
       x_map = _A.householderQr().solve(b_map);
     }
