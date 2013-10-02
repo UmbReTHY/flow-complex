@@ -9,7 +9,7 @@
 
 #include <Eigen/Dense>
 
-namespace FC {
+namespace fc {
 
 template <typename _number_type, typename _dim_type, typename _size_type>
 class point_cloud {
@@ -104,7 +104,7 @@ class point_cloud {
     point_container _points;
 };
 
-}  // namespace FC
+}  // namespace fc
 
 #endif  // POINT_CLOUD_HPP_
 

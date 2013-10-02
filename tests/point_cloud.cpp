@@ -41,7 +41,7 @@ TEST_CASE ("point_cloud" , "test the interface of class point_cloud") {
       el = real_dis(gen);
 
   // construct point cloud adaptor
-  using point_cloud_type = FC::point_cloud<number_type, dim_type, size_type>;
+  using point_cloud_type = fc::point_cloud<number_type, dim_type, size_type>;
   point_cloud_type pc(DIM, points.cbegin(), points.cend());
 
   SECTION ("ctor/asgn", "check for correct constructor/assignment behavior") {
