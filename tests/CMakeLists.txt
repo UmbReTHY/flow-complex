@@ -8,3 +8,4 @@ endmacro (do_test)
 
 do_test(point_cloud)
 do_test(dynamic_qr)
+do_test(affine_hull)
