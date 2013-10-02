@@ -37,7 +37,7 @@ int main() {
 
   // append test
   for (size_type i = 0; i < static_mat.cols(); ++i) {
-    dyn_qr.append_column(static_mat.col(i).data());
+    dyn_qr.append_column(static_mat.col(i));
     dyn_qr.solve(b.data(), x.data());
     eigen_vector const static_sol = static_mat.leftCols(i + 1).householderQr().solve(b_map);
     assert(static_sol == x_map.head(i + 1));
@@ -71,7 +71,7 @@ int main() {
   
   // second append test
   for (size_type i = 0; i < static_mat.cols(); ++i) {
-    dyn_qr.append_column(static_mat.col(i).data());
+    dyn_qr.append_column(static_mat.col(i));
     dyn_qr.solve(b.data(), x.data());
     eigen_vector const static_sol = static_mat.leftCols(i + 1).householderQr().solve(b_map);
     assert(static_sol == x_map.head(dyn_qr.num_cols()));

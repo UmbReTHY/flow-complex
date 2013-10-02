@@ -29,14 +29,15 @@ class dynamic_qr {
       return _A.cols();
     }
     
-    void append_column(number_type const* col) {
+    template <typename DerivedVector>
+    void append_column(Eigen::MatrixBase<DerivedVector> const& col) {
       assert(num_cols() < num_rows());
       // TODO seems buggy, check that
 //      _A.conservativeResize(num_rows(), num_cols() + 1);
       eigen_matrix const tmp = _A;
       _A.resize(num_rows(), num_cols() + 1);
       _A.leftCols(num_cols() - 1) = tmp;
-      _A.rightCols(1) = Eigen::Map<const eigen_vector>(col, num_rows());
+      _A.rightCols(1) = col;
     }
     
     template <typename idx_type>
