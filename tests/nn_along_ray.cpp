@@ -71,6 +71,14 @@ bool is_valid(number_type const t,
 int main() {
   std::srand(std::time(nullptr));
   
+  /** TODO
+    case 1: find no stopper
+    case 2: find exactly 1 stopper
+    case 3: the stopper is found after disregarding a so-far nearest stopper
+    case 4: 2 nn are found
+    case 5: same as 3, however 2 points with identical distance are discarded
+  */
+  
   eigen_vector ray;
   size_type i = 0;
   do {

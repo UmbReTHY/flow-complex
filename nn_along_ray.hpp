@@ -44,10 +44,15 @@ nearest_neighbor_along_ray(number_type const* loc,
       number_type const t = (2 * (x.dot(q) - x_p) + p_p - q.dot(q)) /
                             (2 * tmp);
       if (t > 0) {
-        if (nn.empty() || t == min_t) {
+        if (nn.empty())  {
           nn.push_back(i);
+          min_t = t;
         } else if (t < min_t) {
-          nn.clear();
+          if (nn.size() > 1)
+            nn.erase(nn.begin() + 1, nn.end());
+          nn.front() = i;
+          min_t = t;
+        } else if (t == min_t) {
           nn.push_back(i);
         }
       } 
