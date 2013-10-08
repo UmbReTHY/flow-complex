@@ -41,18 +41,18 @@ nearest_neighbor_along_ray(number_type const* loc,
       number_type const tmp = (v_p - q.dot(v));
       if (tmp == 0)
         throw std::runtime_error("ill-conditioned data: div by 0");
-      number_type const t = (2 * (x.dot(q) - x_p) + p_p - q.dot(q)) /
-                            (2 * tmp);
+      number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
       if (t > 0) {
         if (nn.empty())  {
           nn.push_back(i);
           min_t = t;
         } else if (t < min_t) {
-          if (nn.size() > 1)
-            nn.erase(nn.begin() + 1, nn.end());
+          nn.erase(nn.begin() + 1, nn.end());  // possibly no-op
+          assert(nn.size() == 1);
           nn.front() = i;
           min_t = t;
         } else if (t == min_t) {
+          assert(!nn.empty());
           nn.push_back(i);
         }
       } 
