@@ -14,9 +14,6 @@ find_package(Eigen3 REQUIRED)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
      
 if (ENABLE_TESTS)
-  find_package(Catch REQUIRED)
-  include_directories(SYSTEM ${CATCH_INCLUDE_DIR})
-
   enable_testing()
   add_subdirectory(tests)
 endif (ENABLE_TESTS)
