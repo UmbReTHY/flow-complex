@@ -78,6 +78,10 @@ class critical_point {
         _succs.push_back(succ);
       _succs_mutex.unlock();
     }
+    void add_successor(self_t && succ) {
+      static_assert(false, "add_successor() is not supposed to be called with "
+                           "an r-value");
+    }
 
     idx_container const _indices;
     _number_type const _dist;
