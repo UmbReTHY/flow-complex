@@ -34,6 +34,8 @@ class flow_point {
       // TODO: check for finite max if size = d + 1
     }
     
+    // TODO move constructor
+    
     bool is_proxy_at_inf() const {
       return _is_proxy_at_inf;
     }
@@ -57,6 +59,7 @@ class flow_point {
     affine_hull_t _nn_aff_hull;
     bool _is_proxy_at_inf;
     bool _is_finite_max;
+    // TODO store direct predecessor
 };
 
 }  // namespace fc
