@@ -1,6 +1,7 @@
 #ifndef FLOW_COMPLEX_HPP_
 #define FLOW_COMPLEX_HPP_
 
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -25,10 +26,16 @@ class flow_complex {
 
   public:
     template <class point_iterator>
-    flow_complex(dim_type dim, point_iterator begin, point_iterator end)
-      : _point_cloud(dim, begin, end), _critical_points(/*TODO insert max at inf*/),
-        _cp_at_inf(/*TODO make this the ref of the first inserted cp*/) {
-      auto const first_max = find_first_max();
+    flow_complex(size_type dim, point_iterator begin, point_iterator end)
+      : _point_cloud(dim, begin, end), _critical_points(),
+        _cp_at_inf_ptr(nullptr) {
+      // insert max at inf
+      _critical_points.insert(cp_t(nullptr, nullptr, nullptr, nullptr,
+                                   std::numeric_limits<_number_type>::infinity()));
+      // make this the ref of the first inserted cp
+      _cp_at_inf_ptr = &*_critical_points.begin();
+      assert(is_cp_at_inf(*_cp_at_inf_ptr));
+      auto const first_max(find_first_max());
       // TODO insert this first max as cp if not at inf into container
     }
 
@@ -52,7 +59,7 @@ class flow_complex {
   
     point_cloud<number_type, dim_type, size_type> const _point_cloud;
     cp_container _critical_points;
-    cp_t const _cp_at_inf;  // TODO make this a ref
+    cp_t const* _cp_at_inf_ptr;
 };
 
 }  // namespace fc

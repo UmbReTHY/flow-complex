@@ -98,6 +98,7 @@ template <typename number_type, typename size_type>
 size_type index(critical_point<number_type, size_type> const& cp) {
   // this implicates, that if the cp at inf is ecoded by an empty member list
   // this function cannot be called on a cp at inf
+  assert(!is_cp_at_inf(cp));
   assert(std::distance(cp.m_cbegin(), cp.m_cend()) > 0);
   return std::distance(cp.m_cbegin(), cp.m_cend()) - 1;
 }
