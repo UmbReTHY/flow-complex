@@ -3,7 +3,11 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
-set (CMAKE_CXX_FLAGS "-Wall -Wextra --std=c++11")
+# TODO detect clang and gcc and restrict flags to these two
+set (CMAKE_CXX_FLAGS "--std=c++11")
+set (CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -g -O0")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3")
+set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3")
 
 option(ENABLE_TESTS
        "if set, builds the tests and provides a test target for Makefiles"
