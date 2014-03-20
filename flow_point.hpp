@@ -2,46 +2,53 @@
 #define FLOW_POINT_HPP_
 
 #include <cassert>
+#include <cstdint>
 
-#include <stdexcept>
+#include <tuple>
 #include <vector>
 
 #include <Eigen/Dense>
 
-#include "point_cloud.hpp"
 #include "affine_hull.hpp"
+#include "point_cloud.hpp"
+#include "utility.hpp"
 
-namespace fc {
+namespace FC {
 
-template <typename _number_type, typename _size_type, typename _dim_type>
+template <typename _number_type, typename _size_type>
 class flow_point {
-  using affine_hull_t = affine_hull<_number_type, _size_type, _dim_type>;
+  using affine_hull_t = affine_hull<_number_type, _size_type>;
 
   public:
-    typedef _number_type   number_type;
-    typedef _size_type       size_type;
-    typedef point_cloud<number_type, _dim_type, size_type> point_cloud_t;
+    typedef _number_type                          number_type;
+    typedef _size_type                              size_type;
+    typedef point_cloud<number_type, size_type> point_cloud_t;
   
-    flow_point(point_cloud_t const& pc, number_type const* loc_ptr)
-      : _point_cloud(pc), _location(loc_ptr, loc_ptr + pc.dim()),
-        _nn_aff_hull(pc), _is_proxy_at_inf(false), _is_finite_max(false) {
-      auto const nns = nearest_neighbors(loc_ptr),
-      for (auto const& nn : nns)
-        _nn_aff_hull.add_point(nn);
-      // degenerate input
-      if (_nn_aff_hull.size() > (pc.dim() + 1))
-        throw std::invalid_argument("point cloud not in general position");
-      // TODO: check for finite max if size = d + 1
+    flow_point(point_cloud_t const& pc)
+      : _pc(pc), _location(pc.dim()), _nn_aff_hull(pc),
+        _proxy_at_inf_flag(0), _finite_max_flag(0) {
+      // 1) generate seed
+      std::tuple<_size_type, _number_type, bool> nn;
+      // reseed as long as the nearest neighbor is not unique
+      do {
+        gen_convex_comb(pc.cbegin(), pc.cend(), pc.dim(), _location.data());
+        nn = pc.nearest_neighbor(_location.data());
+      } while (std::get<2>(nn));
+      // add the nearest neighbor
+      _nn_aff_hull.add_point(std::get<0>(nn));
     }
     
-    // TODO move constructor
+    flow_point(flow_point const&) = delete;
+    flow_point & operator=(flow_point const&) = delete;
+    flow_point(flow_point &&) = delete;
+    flow_point & operator=(flow_point &&) = delete;
     
     bool is_proxy_at_inf() const {
-      return _is_proxy_at_inf;
+      return (_proxy_at_inf_flag == 1);
     }
     
     bool is_finite_max() const {
-      return _is_finite_max;
+      return (_finite_max_flag == 1);
     }
     
     // TODO: continue here
@@ -50,19 +57,23 @@ class flow_point {
       assert(!is_finite_max());
       
       using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
-      auto x = Eigen::Map<eigen_vector>(_location.data());
+      auto x = Eigen::Map<eigen_vector>(_location.data(), _pc.dim());
+      
+      // TODO remove
+      _proxy_at_inf_flag = 1;
     }
 
   private:
-    point_cloud_t const& _point_cloud;
+    point_cloud_t const& _pc;
     std::vector<_number_type> _location;
     affine_hull_t _nn_aff_hull;
-    bool _is_proxy_at_inf;
-    bool _is_finite_max;
+    std::uint8_t _proxy_at_inf_flag : 1;
+    std::uint8_t   _finite_max_flag : 1;
+    std::uint8_t                    : 6;  // unused padding
     // TODO store direct predecessor
 };
 
-}  // namespace fc
+}  // namespace FC
 
 #endif  // FLOW_POINT_HPP_
 

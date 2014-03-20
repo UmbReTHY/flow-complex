@@ -1,120 +1,120 @@
 #ifndef CRITICAL_POINT_HPP_
 #define CRITICAL_POINT_HPP_
 
+#include <cassert>
+
 #include <algorithm>
-#include <functional>
 #include <iterator>
 #include <limits>
-#include <mutex>
 #include <vector>
 
-namespace fc {
+namespace FC {
 
-// forward declarations
-template <typename _number_type, typename _size_type>
-class critical_point;
-template <typename number_type, typename size_type>
-size_type index(critical_point<number_type, size_type> const&);
-template <typename number_type, typename size_type>
-bool is_cp_at_inf(critical_point<number_type, size_type> const& cp);
-
+/**
+  @brief 
+*/
 template <typename _number_type, typename _size_type>
 class critical_point {
-    using self_t = critical_point<_number_type, _size_type>;
-    using cp_cref_t = std::reference_wrapper<self_t const>;
-    using succ_container = std::vector<cp_cref_t>;
-    using idx_container = std::vector<_size_type>;
   public:
     typedef _number_type                           number_type;
     typedef _size_type                               size_type;
-    typedef idx_container::const_iterator   idx_const_iterator;
-    typedef succ_container::const_iterator succ_const_iterator;
- 
-    number_type dist() const noexcept {
-      return _dist;
-    }
+    typedef critical_point<_number_type, _size_type> self_type;
     
-    idx_const_iterator m_cbegin() const noexcept {
+  private:
+    using succ_container = std::vector<self_type *>;
+    using idx_container = std::vector<_size_type>;
+    
+  public:    
+    typedef typename idx_container::const_iterator   idx_const_iterator;
+    typedef typename succ_container::const_iterator succ_const_iterator;
+ 
+    // constructors and assignment-operators
+    critical_point(critical_point const&);
+    critical_point(critical_point &&);
+    critical_point & operator=(critical_point const&);
+    critical_point & operator=(critical_point &&);
+ 
+    // idx-iterators
+    idx_const_iterator idx_cbegin() const noexcept {
       return _indices.cbegin();
     }
     
-    idx_const_iterator m_cend() const noexcept {
+    idx_const_iterator idx_cend() const noexcept {
       return _indices.cend();
     }
 
-    succ_const_iterator s_cbegin() const noexcept {
-      return _succs.cbegin();
+    // succ iterators
+    succ_const_iterator succ_cbegin() const noexcept {
+      return _successors.cbegin();
     }
     
-    succ_const_iterator s_cend() const noexcept {
-      return _succs.cend();
+    succ_const_iterator succ_cend() const noexcept {
+      return _successors.cend();
     }
+    
+    // modifiers
+    void add_successor(self_type * succ) {
+      assert(_successors.cend() ==
+             std::find(_successors.cbegin(), _successors.cend(), succ));
+      _successors.push_back(succ);
+    }
+    
+    void erase(self_type *);
+    void erase(succ_const_iterator);
+
+    // info
+    bool is_max_at_inf() const noexcept {
+      return _indices.empty();
+    }
+    
+    number_type dist() const noexcept {
+      return (is_max_at_inf() ? std::numeric_limits<number_type>::infinity()
+                              : _dist);
+    }
+    
+    size_type index() const noexcept {
+      return (is_max_at_inf() ? _index : std::distance(_indices.cbegin(),
+                                                       _indices.cend()));
+    }
+
   private:
-    // TODO friend the factory
-    template <typename member_iterator, typename succ_iterator>
-    critical_point(member_iterator m_begin, member_iterator m_end,
-                   succ_iterator s_begin, succ_iterator s_end,
-                   number_type const distance)
-    : _indices(m_begin, m_end), _succs(s_begin, s_end), _dist(distance) {
-      if (_dist == std::numeric_limits<_number_type>::infinity()) {
-        assert(_indices.empty() && "cps at inf shall not have members");
-        assert(_succs.empty() && "cps at inf don't have successors");
-      } else {
-        assert(_dist >= 0);
-        assert(!_indices.empty() && "only cps at inf can have no members");
-        if (_dist == 0)
-          assert(_indices.size() == 1u &&
-                 "only index-0 cps have only 1 member");
-        for (auto const& succ : _succs)
-          assert((is_cp_at_inf(succ) || index(succ) > index(*this)) &&
-                 _dist < succ._dist);
-      }
+    // constructor for regular cps
+    template <typename IdxIterator, typename SuccIterator>
+    critical_point(IdxIterator idx_begin, IdxIterator idx_end,
+                   self_type *const successor, number_type dist)
+      : _indices(idx_begin, idx_end), _successors(&successor, &(successor) + 1),
+        _dist(dist) {
     }
-
-    // TODO friend the relevant class that uses this method
-    void add_successor(self_t const& succ) {    
-      _succs_mutex.lock();
-      if (_succs.end() == std::find(_succs.begin(), _succs.end(), succ))
-        _succs.push_back(succ);
-      _succs_mutex.unlock();
+    
+    // constructor for cp at inf
+    critical_point(size_type index)
+      : _index(index) {
     }
-    void add_successor(self_t && succ) {
-      static_assert(false, "add_successor() is not supposed to be called with "
-                           "an r-value");
-    }
-
+  
+    // members
     idx_container const _indices;
-    _number_type const _dist;
-    succ_container _succs;
-    std::mutex _succs_mutex;
+    succ_container _successors;
+    union {
+      _number_type const _dist;  // for regular cps
+      _size_type const _index;   // for cp at inf
+    };
 };
-
-template <typename number_type, typename size_type>
-bool is_cp_at_inf(critical_point<number_type, size_type> const& cp) {
-  return cp.dist() == std::numeric_limits<number_type>::infinity();
-}
-
-template <typename number_type, typename size_type>
-size_type index(critical_point<number_type, size_type> const& cp) {
-  // this implicates, that if the cp at inf is ecoded by an empty member list
-  // this function cannot be called on a cp at inf
-  assert(!is_cp_at_inf(cp));
-  assert(std::distance(cp.m_cbegin(), cp.m_cend()) > 0);
-  return std::distance(cp.m_cbegin(), cp.m_cend()) - 1;
-}
 
 template <typename number_type, typename size_type>
 bool operator==(critical_point<number_type, size_type> const& lhs,
                 critical_point<number_type, size_type> const& rhs) {
-  assert(std::is_sorted(lhs.m_cbegin(), lhs.m_cend()));
-  assert(std::is_sorted(rhs.m_cbegin(), rhs.m_cend()));
+  assert(std::is_sorted(lhs.idx_cbegin(), lhs.idx_cend()));
+  assert(std::is_sorted(rhs.idx_cbegin(), rhs.idx_cend()));
   // we want to allow cps of different indices to be compared
   // (e.g. when stored in the same hash container, == is possibly called on
   // two instances with different index), however this should evaluate to
   // false then
-  return (std::distance(lhs.m_cbegin(), lhs.m_cend()) ==
-          std::distance(rhs.m_cbegin(), rhs.m_cend())) &&
-         std::equal(lhs.m_cbegin(), lhs.m_cend(), rhs.m_cbegin());
+  return ((lhs.is_max_at_inf() && rhs.is_max_at_inf()) ||     // both cps at inf
+          ((!lhs.is_max_at_inf() && !rhs.is_max_at_inf()) &&  // both regular
+           (lhs.index() == rhs.index()) &&  // avoids comparison below (somet.)
+            std::equal(lhs.idx_cbegin(), lhs.idx_cend(), rhs.idx_cbegin())
+           )
+         );
 }
 
 template <typename number_type, typename size_type>
@@ -123,6 +123,6 @@ bool operator!=(critical_point<number_type, size_type> const& lhs,
   return !(lhs == rhs);
 }
 
-}  // namespace fc
+}  // namespace FC
 
 #endif  // CRITICAL_POINT_HPP_

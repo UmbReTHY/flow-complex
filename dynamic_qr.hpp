@@ -5,7 +5,7 @@
 
 #include <Eigen/Dense>
 
-namespace fc {
+namespace FC {
 
 template <typename _number_type, typename _size_type>
 class dynamic_qr {
@@ -34,14 +34,17 @@ class dynamic_qr {
       assert(num_cols() < num_rows());
       // TODO seems buggy, check that
 //      _A.conservativeResize(num_rows(), num_cols() + 1);
-      eigen_matrix const tmp = _A;
-      _A.resize(num_rows(), num_cols() + 1);
-      _A.leftCols(num_cols() - 1) = tmp;
-      _A.rightCols(1) = col;
+//      eigen_matrix const tmp = _A;
+//      _A.resize(num_rows(), num_cols() + 1);
+//      _A.leftCols(num_cols() - 1) = tmp;
+//      _A.rightCols(1) = col;
+      eigen_matrix tmp(num_rows(), num_cols() + 1);
+      tmp.leftCols(num_cols()) = _A;
+      tmp.rightCols(1) = col;
+      _A.swap(tmp);
     }
     
-    template <typename idx_type>
-    void delete_column(idx_type const pos) {
+    void delete_column(size_type const pos) {
       assert(pos >= 0);
       assert(pos < num_cols());
       if (pos != num_cols() - 1) {
@@ -74,7 +77,7 @@ class dynamic_qr {
     void solve(number_type const* b, number_type * x) const {
       assert(num_cols() > 0);
       Eigen::Map<eigen_vector> x_map(x, num_cols());
-      Eigen::Map<const eigen_vector> b_map(b, num_rows());
+      Eigen::Map<eigen_vector const> b_map(b, num_rows());
       x_map = _A.householderQr().solve(b_map);
     }
     
@@ -83,7 +86,7 @@ class dynamic_qr {
     Eigen::Matrix<number_type, Eigen::Dynamic, Eigen::Dynamic> _A;
 };
 
-}  // namespace fc
+}  // namespace FC
 
 #endif  // DYNAMIC_QR_HPP_
 
