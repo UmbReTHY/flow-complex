@@ -29,7 +29,8 @@ class affine_hull {
     typedef typename member_container::const_iterator const_iterator;
     typedef point_cloud<number_type, size_type>        point_cloud_t;
     
-    affine_hull(point_cloud_t const& pc) : _pc(pc), _dyn_qr(pc.dim()) {
+    affine_hull(point_cloud_t const& pc)
+      : _dyn_qr(pc.dim()), _members(), _pc(pc) {
     }
     
     void add_point(size_type const idx) {
@@ -95,9 +96,9 @@ class affine_hull {
       return _members.end() != std::find(_members.begin(), _members.end(), idx);
     }
 
-    point_cloud_t const& _pc;
     dynamic_qr<_number_type, _size_type> _dyn_qr;
     std::vector<_size_type> _members;
+    point_cloud_t const& _pc;
 };
 
 }  // namespace FC

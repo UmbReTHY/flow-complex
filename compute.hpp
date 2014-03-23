@@ -20,7 +20,7 @@ compute_flow_complex (number_type const** begin, number_type const** end,
   // 1) find first maximum
   flow_point<number_type, size_type> fp(pc);
   while (not fp.is_proxy_at_inf() and not fp.is_finite_max())
-    fp.ascend();
+    fp.ascend();  // TODO pass numerical tolerance
   
   return fc;
 }
