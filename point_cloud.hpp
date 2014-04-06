@@ -17,12 +17,13 @@ namespace FC {
 */
 template <typename _number_type, typename _size_type>
 class point_cloud {
-  using pt_cont = std::vector<_number_type const*>;
+  using pt_cont = std::vector<_number_type const*>;  // TODO store Eigen::Maps instead
 
   public:
     typedef _number_type number_type;
     typedef _size_type     size_type;
     typedef typename pt_cont::const_iterator const_iterator;
+    typedef Eigen::Matrix<number_type, Eigen::Dynamic, 1> eigen_vector;
   
     /**
       @tparam Iterator when dereferenced, returns a (reference of a) pointer
@@ -64,17 +65,15 @@ class point_cloud {
               std::get<2>(r) is set to true if there is more than one nearest
                              neighbor, and false otherwise.
     */
-    // TODO check exception safety
     std::tuple<size_type, number_type, bool>
-    nearest_neighbor(number_type const* q) const {
+    nearest_neighbor(eigen_vector const* q) const {
       auto r = std::make_tuple(size_type(0),
                                std::numeric_limits<number_type>::infinity(),
                                false);
       using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
       using cmap = Eigen::Map<eigen_vector const>;
-      auto q_map = cmap(q, _dim);
       for (size_type i = 0; i < _points.size(); ++i) {
-        auto tmp = (q_map - cmap(_points[i], _dim)).squaredNorm();
+        auto tmp = (*q - cmap(_points[i], _dim)).squaredNorm();
         if (tmp < std::get<1>(r)) {
           std::get<1>(r) = tmp;
           std::get<0>(r) = i;

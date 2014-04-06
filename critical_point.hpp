@@ -79,7 +79,7 @@ class critical_point {
 
   private:
     // constructor for regular cps
-    template <typename IdxIterator, typename SuccIterator>
+    template <typename IdxIterator>
     critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                    self_type *const successor, number_type dist)
       : _indices(idx_begin, idx_end), _successors(&successor, &(successor) + 1),

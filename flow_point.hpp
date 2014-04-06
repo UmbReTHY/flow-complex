@@ -31,7 +31,7 @@ class flow_point {
     flow_point(point_cloud_t const& pc)
       : _nn_aff_hull(pc), _location(pc.dim()), _pc(pc), _succ(nullptr),
         _proxy_at_inf_flag(0), _finite_max_flag(0) {
-      // 1) generate seed
+      // generate seed
       std::tuple<_size_type, _number_type, bool> nn;
       // reseed as long as the nearest neighbor is not unique
       do {

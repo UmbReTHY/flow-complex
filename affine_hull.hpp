@@ -97,7 +97,7 @@ class affine_hull {
     }
 
     dynamic_qr<_number_type, _size_type> _dyn_qr;
-    std::vector<_size_type> _members;
+    std::vector<_size_type> _members;  // TODO write own dynarray class, to save the capacity pointer
     point_cloud_t const& _pc;
 };
 

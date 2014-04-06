@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
-# TODO detect clang and gcc and restrict flags to these two
+# TODO provide compiler specific flags: clang/gcc and intel
 set (CMAKE_CXX_FLAGS "-std=c++11 -fno-exceptions -fno-rtti")
 set (CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -g -O0")
 set (CMAKE_CXX_FLAGS_RELEASE "-O3")
