@@ -3,11 +3,14 @@
 
 #include <cassert>
 
+#include <iterator>
 #include <limits>
 #include <tuple>
 #include <vector>
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+
+#include "utility.hpp"
 
 namespace FC {
 
@@ -15,40 +18,45 @@ namespace FC {
   @brief a wrapper to a vector with additional information about the dimension
          of the point cloud
 */
-template <typename _number_type, typename _size_type>
+template <typename _number_type, typename _size_type, bool Aligned>
 class point_cloud {
-  using pt_cont = std::vector<_number_type const*>;  // TODO store Eigen::Maps instead
+  using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
+  using eigen_map = Eigen::Map<eigen_vector const, eigen_align<Aligned>::value>;
+  using pt_cont = std::vector<eigen_map>;
 
   public:
-    typedef _number_type number_type;
-    typedef _size_type     size_type;
+    typedef _number_type                     number_type;
+    typedef _size_type                       size_type;
     typedef typename pt_cont::const_iterator const_iterator;
-    typedef Eigen::Matrix<number_type, Eigen::Dynamic, 1> eigen_vector;
   
     /**
-      @tparam Iterator when dereferenced, returns a (reference of a) pointer
-                       to number_type
+      @tparam Iterator when dereferenced, returns a pointer to number_type
     */
-    template <typename Iterator>
-    point_cloud(Iterator begin, Iterator end, size_type dim)
-      : _points(begin, end), _dim(dim) {
+    template <typename Iterator, typename dim_type>
+    point_cloud(Iterator begin, Iterator end, dim_type dim) {
+      auto const size = std::distance(begin, end);
+      _points.reserve(size);
+      for (auto it = begin; it != end; ++it)
+        _points.emplace_back(*it, dim);
     }
     
-    const_iterator cbegin() const noexcept {
+    const_iterator begin() const noexcept {
       return _points.cbegin();
     }
     
-    const_iterator cend() const noexcept {
+    const_iterator end() const noexcept {
       return _points.cend();
     }
-  
-    number_type const* operator[](size_type idx) const {
+
+    template <typename Index>
+    eigen_map const& operator[](Index idx) const {
       assert(idx < _points.size());
       return _points[idx];
     }
     
-    size_type dim() const noexcept {
-      return _dim;
+    typename eigen_map::Index dim() const noexcept {
+      assert(not _points.empty() && "YOU CREATED AN EMPTY POINT CLOUD.");
+      return _points[0].size();
     }
     
     size_type size() const noexcept {
@@ -65,15 +73,14 @@ class point_cloud {
               std::get<2>(r) is set to true if there is more than one nearest
                              neighbor, and false otherwise.
     */
+    template <typename Derived>
     std::tuple<size_type, number_type, bool>
-    nearest_neighbor(eigen_vector const* q) const {
+    nearest_neighbor(Eigen::MatrixBase<Derived> const& q) const {
       auto r = std::make_tuple(size_type(0),
                                std::numeric_limits<number_type>::infinity(),
                                false);
-      using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-      using cmap = Eigen::Map<eigen_vector const>;
       for (size_type i = 0; i < _points.size(); ++i) {
-        auto tmp = (*q - cmap(_points[i], _dim)).squaredNorm();
+        number_type tmp = (q - _points[i]).squaredNorm();
         if (tmp < std::get<1>(r)) {
           std::get<1>(r) = tmp;
           std::get<0>(r) = i;
@@ -81,13 +88,11 @@ class point_cloud {
           std::get<2>(r) = true;
         }
       }
-      
       return r;
     }
   
   private:
     pt_cont _points;
-    size_type _dim;
 };
 
 }  // namespace FC

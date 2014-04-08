@@ -3,29 +3,30 @@
 
 #include <cassert>
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/QR>
 
 namespace FC {
 
-template <typename _number_type, typename _size_type>
+template <typename _number_type>
 class dynamic_qr {
   using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
   using eigen_matrix = Eigen::Matrix<_number_type, Eigen::Dynamic, Eigen::Dynamic>;
 
   public:
     typedef _number_type number_type;
-    typedef _size_type size_type;
     
+    template <typename size_type>
     dynamic_qr(size_type num_rows)
       : _A(num_rows, 0) {
       assert(num_rows > 0);
     }
     
-    size_type num_rows() const noexcept {
+    typename eigen_matrix::Index num_rows() const noexcept {
       return _A.rows();
     }
     
-    size_type num_cols() const noexcept {
+    typename eigen_matrix::Index num_cols() const noexcept {
       return _A.cols();
     }
     
@@ -44,6 +45,7 @@ class dynamic_qr {
       _A.swap(tmp);
     }
     
+    template <typename size_type>
     void delete_column(size_type const pos) {
       assert(pos >= 0);
       assert(pos < num_cols());
@@ -72,13 +74,13 @@ class dynamic_qr {
     }
     
      /**
-      @brief finds the least-sqaures solution to QR * x = b
+      @brief finds the least-squares solution to QR * x = b
     */
-    void solve(number_type const* b, number_type * x) const {
+    template <typename Derived1, typename Derived2>
+    void solve(Eigen::MatrixBase<Derived1> const& b,
+               Eigen::MatrixBase<Derived2> const& x) const {
       assert(num_cols() > 0);
-      Eigen::Map<eigen_vector> x_map(x, num_cols());
-      Eigen::Map<eigen_vector const> b_map(b, num_rows());
-      x_map = _A.householderQr().solve(b_map);
+      const_cast<Eigen::MatrixBase<Derived2> &>(x) = _A.householderQr().solve(b);
     }
     
   private:

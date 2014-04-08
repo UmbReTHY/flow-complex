@@ -6,12 +6,14 @@
 namespace FC {
 
 // forward declaration
-template <typename _number_type, typename _size_type>
+template <typename _point_cloud_type>
 class ascend_task;
 
-template <typename _number_type, typename _size_type>
+template <typename _point_cloud_type>
 class descend_task {
-  using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
+  using number_type = typename _point_cloud_type::number_type;
+  using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
+  
   public:
   
   // TODO almost everything
@@ -20,7 +22,7 @@ class descend_task {
     eigen_vector _location;
     eigen_vector _ray;
 
-  friend class ascend_task<_number_type, _size_type>;
+  friend class ascend_task<_point_cloud_type>;
 };
 
 }  // namespace FC

@@ -6,7 +6,7 @@
 #include <array>
 
 // 3rd-party library headers
-#include <Eigen/Dense>
+#include <Eigen/Core>
 
 // local headers
 #include "critical_point.hpp"
@@ -36,10 +36,9 @@ int main(int, char**) {
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
   using cmap = Eigen::Map<eigen_vector const>;
 
-  auto fc = FC::compute_flow_complex(points.data(), points.data() + points.size(),
-                                     DIM, 
-                                     /* nr of threads */ 8,
-                                     /* numerical tolerance */ 1.e-5);
+  auto fc = FC::compute_flow_complex<size_type, false>
+            (points.cbegin(), points.cend(), DIM, 
+             /* nr of threads */ 8, /* numerical tolerance */ 1.e-5);
   
   for (auto const& cp : fc)
     print(cp);
