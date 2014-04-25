@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
-# TODO provide compiler specific flags: clang/gcc and intel
+# TODO restrict to clang 3.4
 set (CMAKE_CXX_FLAGS "-std=c++11 -fno-exceptions -fno-rtti")
 set (CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -g -O0")
-set (CMAKE_CXX_FLAGS_RELEASE "-O3")
-set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3")
+set (CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG")
 
 option(BUILD_TESTS
        "builds the tests and provide a test target for Makefiles"

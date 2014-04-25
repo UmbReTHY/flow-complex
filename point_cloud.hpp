@@ -27,7 +27,7 @@ class point_cloud {
   public:
     typedef _number_type                     number_type;
     typedef _size_type                       size_type;
-    typedef typename pt_cont::const_iterator const_iterator;
+    typedef typename pt_cont::const_iterator iterator;
   
     /**
       @tparam Iterator when dereferenced, returns a pointer to number_type
@@ -40,11 +40,11 @@ class point_cloud {
         _points.emplace_back(*it, dim);
     }
     
-    const_iterator begin() const noexcept {
+    iterator begin() const noexcept {
       return _points.cbegin();
     }
     
-    const_iterator end() const noexcept {
+    iterator end() const noexcept {
       return _points.cend();
     }
 
