@@ -29,7 +29,9 @@ public:
   // constructor for finite maxima
   template <typename IdxIterator>
   critical_point(IdxIterator idx_begin, IdxIterator idx_end, number_type dist)
-    : _indices(idx_begin, idx_end), _dist(dist) {}
+    : _indices(idx_begin, idx_end), _dist(dist) {
+    std::sort(_indices.begin(), _indices.end());
+  }
   
   // constructor for regular cps
   template <typename IdxIterator>
@@ -91,12 +93,12 @@ public:
   
   size_type index() const noexcept {
     return (is_max_at_inf() ? _index : std::distance(_indices.cbegin(),
-                                                     _indices.cend()));
+                                                     _indices.cend()) - 1);
   }
 
 private:
-  idx_container const _indices;
-  succ_container      _successors;
+  idx_container  _indices;
+  succ_container _successors;
   union {
     _number_type const _dist;  // for regular cps
     _size_type const _index;   // for cp at inf
