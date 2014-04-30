@@ -1,7 +1,9 @@
 #ifndef FLOW_COMPLEX_HPP_
 #define FLOW_COMPLEX_HPP_
 
+#include <algorithm>
 #include <vector>
+#include <utility>
 
 #include "critical_point.hpp"
 
@@ -21,7 +23,12 @@ class flow_complex {
     typedef typename cp_container::iterator             iterator;
     typedef typename cp_container::const_iterator const_iterator;
   
-    flow_complex() = default;
+    /**
+      @brief initializes the flow complex with a maximum at infinity
+    */
+    flow_complex(size_type dim) {
+      _cps.emplace_back(dim);
+    }
     // copy- and move-constructor
     flow_complex(flow_complex const&) = default;
     flow_complex(flow_complex &&) = default;
@@ -51,6 +58,25 @@ class flow_complex {
     void erase(cp_type const&);
     void erase(iterator);
     void erase(const_iterator);
+    
+    /**
+      @return the first member of the pair is true, if the critical point was
+              inserted by this call, and false if it already existed
+    */
+    std::pair<bool, cp_type *> insert(cp_type && cp) {
+      std::pair<bool, cp_type *> r;
+      auto it = std::find(_cps.begin(), _cps.end(), cp);
+      if (_cps.end() == it) {
+        // insert the new cp
+        _cps.push_back(std::move(cp));
+        r.first  = true;
+        r.second = &_cps.back();
+      } else {
+        r.first = false;
+        r.second = &*it;
+      }
+      return r;
+    }
     
   private:  
     cp_container _cps;
