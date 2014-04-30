@@ -2,6 +2,7 @@
 #define COMPUTE_HPP_
 
 #include <stack>
+#include <utility>
 
 #include "flow_complex.hpp"
 #include "point_cloud.hpp"
@@ -26,23 +27,28 @@ compute_flow_complex (PointIterator begin, PointIterator end,
                       num_tol_t /*num_tolerance*/) {
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
+  using cp_type = typename fc_type::cp_type;
   using pc_type = point_cloud<number_type, size_type, Aligned>;
   using at_type = ascend_task<pc_type>;
   using dt_type = descend_task<pc_type>;
 
-  fc_type fc;
+  fc_type fc(dim);
+  // TODO init fc with id-0 critical points
   // 1) init data structures
   pc_type pc(begin, end, dim);
   std::stack<at_type> qa;
   std::stack<dt_type> qd;
-  // 2) seed initial ascend task(s)
+  // 2) create the handlers for task communication
+  auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
+  auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
+  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};
+  // 3) seed initial ascend task(s)
   qa.emplace(pc);
+  // 4) process all tasks
   while (not qa.empty()) {
+    // TODO handle descend tasks
     at_type & at = qa.top();
-    auto dh_handler = [&qd](dt_type && dt) {qd.push(std::move(dt));};
-    // TODO define cp-Handler : takes cp and returns true if inserted, false otherwise
-    // TODO define at-Handler: see dt Handler
-    at.execute();
+    at.execute(ath, dth, cph);
     qa.pop();
   }
   
