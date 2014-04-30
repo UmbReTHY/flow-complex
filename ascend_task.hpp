@@ -5,17 +5,20 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include <pair>
 #include <utility>
 #include <random>
-#include <tuple>
 #include <limits>
+#include <exception>
 
 #include <Eigen/Core>
 
+#include "critical_point.hpp"
 #include "descend_task.hpp"
 #include "point_cloud.hpp"
 #include "affine_hull.hpp"
 #include "nn_along_ray.hpp"
+#include "update_ray.hpp"
 
 namespace FC {
 
@@ -25,10 +28,9 @@ public:
   typedef point_cloud_t                          point_cloud_type;
   typedef typename point_cloud_type::number_type number_type;
   typedef typename point_cloud_type::size_type   size_type;
-
 private:
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-
+  using cp_type = critical_point<number_type, size_type>;
 public:
   ascend_task(point_cloud_type const& pc)
     : _ah(pc), _location(pc.dim()), _ray(pc.dim()) {
@@ -45,21 +47,26 @@ public:
     _ray = pc[*_ah.begin()] - _location;
   }
   
-  ascend_task(descend_task<point_cloud_type> && dt)
-  : _ah(std::move(dt._ah)) {
+  ascend_task(affine_hull<point_cloud_type> && ah,
+              Eigen::Matrix<number_type, Eigen::Dynamic, 1> && location,
+              Eigen::Matrix<number_type, Eigen::Dynamic, 1> && ray)
+  : _ah(std::move(ah)) {
     assert(_ah.size() == _ah.pc().dim());  // should be at a (d-1) cp
-    _location.swap(dt._location);
-    _ray.swap(dt._ray);
+    _location.swap(location);
+    _ray.swap(ray);
   }
   
   /**
     @return true, if finite maximum, false if maximum at infinity
   */
-  template <typename DTHandler, typename ATHandler, typename CPHandler>
-  void execute(DTHandler & dth, ATHandler & ath, CPHandler & cph) {
+  template <typename ATHandler, typename DTHandler, typename CPHandler>
+  void execute(ATHandler & ath, DTHandler & dth, CPHandler & cph) {
     // TODO a DEBUG-only member, to track double calls
     auto const& pc = _ah.pc();
+    std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
     // TODO dropped point storage does not have to be a member!
+    eigen_vector driver(pc.dim());
+    eigen_vector lambda(pc.dim() + 1);
     do {
       // TODO respect dropped indices
       size_type curr_idx = 0;  // for lambda below
@@ -75,79 +82,65 @@ public:
           return static_cast<decltype(&pc[curr_idx])>(nullptr);
         }
       };
-      auto nn = nearest_neighbor_along_ray(_location, _ray,
-                                           pc[*_ah.begin()],
-                                           get_next);
-      if (std::get<2>(nn) != NN_ERROR::OK) {
-        switch (std::get<2>(nn)) {
-          case NN_ERROR::DIV_BY_ZERO : {
-            std::printf("division by zero in 'nearest_neighbor_along_ray'. "
-                        "Perturb data.\n");
-            break;
-          }
-          case NN_ERROR::MORE_THAN_ONE_NN : {
-            std::printf("more than one nearest neighbor found in "
-                        "'nearest_neighbor_along_ray'. Perturb data.\n");
-            break;
-          }
-          default: assert(false && "unknown error in "
-                                   "nearest_neighbor_along_ray");
-        }
+      auto nn = std::make_pair(nnvec.begin(), number_type(0));
+      try {
+        nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
+                                        get_next, nnvec.begin(), nnvec.begin() +
+                                        (pc.dim() + 1 - _ah.size()));
+      } catch(std::exception & e) {
+        std::printf("error: %s\n", e.what());
         std::exit(EXIT_FAILURE);
+      }
+      using dt = descend_task<point_cloud_type>;
+      if (nn.second == std::numeric_limits<number_type>::infinity()) {
+        assert(_ah.size() == pc.dim());
+        dth(dt(std::move(_ah), std::move(_location), cph(cp_type(pc.dim()))));
+        break;  // EXIT 1
       } else {
-        using dt = descend_task<point_cloud_type>;
-        if (std::get<1>(nn) == std::numeric_limits<number_type>::infinity()) {
-          assert(_ah.size() == pc.dim());
-          _ray *= -1;  // invert the ray for the descend task
-          dth(dt(std::move(_ah), std::move(_location), std::move(_ray)));
-          break;  // EXIT 1
-        } else {
-          _location += std::get<1>(nn) * _ray;
-          _ah.add_point(std::get<0>(nn));
-          // check for finite max
-          if (_ah.size() == pc.dim() + 1) {
-            eigen_vector lambda(_ah.size());
-            _ah.project(_location, lambda);
-            // drop negative indices
-            auto m_it = _ah.begin();
-            for (size_type i = 0; i < lambda.size(); ++i) {
-              // TODO remember dropped indices
-              if (lambda[i] < 0)
-                _ah.drop_point(*m_it);
-              m_it++;
-            }
-            if (_ah.size() == pc.dim() + 1) {
-              assert(_ah.size() == pc.dim() + 1));
-              if (cph()) {  // TODO continue here: spawn dt-s, if the insert succeeded
-                // TODO don't descend to idx-0 cp-s
-                for (auto m : _ah) {
-                  // TODO compute the respective ray
-                }
-              }
-              break;    // EXIT 2 - none have been dropped -> finite max
-            } else {
-              update_ray();
-            }
-          } else {
-            update_ray();
+        _location += nn.second * _ray;
+        for (auto it = nnvec.begin(); it != r.first; ++it)
+          _ah.add_point(*it);
+        // check for finite max
+        if (_ah.size() == pc.dim() + 1) {
+          eigen_vector lambda(_ah.size());
+          _ah.project(_location, lambda);
+          // drop negative indices
+          auto m_it = _ah.begin();
+          for (size_type i = 0; i < lambda.size(); ++i) {
+            // TODO remember dropped indices
+            if (lambda[i] < 0)
+              _ah.drop_point(*m_it);
+            m_it++;
           }
+          if (_ah.size() == pc.dim() + 1) {
+            assert(_ah.size() == pc.dim() + 1);
+            number_type dist = (_location - pc[*_ah.begin()]).norm();
+            auto r_pair = cph(cp_type(_ah.begin(), _ah.end(), dist));
+            if (r_pair.first) {
+              auto max_ptr = r_pair.second;
+              if (max_ptr->index() > 1) { // don't descend to idx-0 cp-s
+                // TODO maybe pass the recently dropped indices
+                for (auto it = ++_ah.begin(); it != _ah.end(); ++it) {
+                  auto new_ah = _ah;
+                  new_ah.drop_point(m);
+                  dth(std::move(new_ah), eigen_vector(_location), max_ptr);
+                }
+                // reuse this task's affine hull for one of the descent tasks
+                dth(std::move(_ah), std::move(_location), max_ptr);
+              }
+            }
+            break;    // EXIT 2 - none have been dropped -> finite max
+          } else {
+            update_ray(_ah, _location, lambda, driver, _ray);
+          }
+        } else {
+          update_ray(_ah, _location, lambda, driver, _ray);
         }
       }
     } while(true);
   }
   
 private:
-  void update_ray() {
-    // TODO measure performance for lambda/driver being members: no reallocation
-    eigen_vector lambda(_ah.size());
-    _ah.project(_location, lambda);
-    eigen_vector driver = eigen_vector::Zero(_location.size());
-    auto m_it = _ah.begin();
-    for (size_type i = 0; i < _ah.size(); ++i)
-      driver += lambda[i] * _ah.pc()[*m_it++];
-    _ray = _location - driver;
-  }
-
   /**
     @brief generates a convex combination of a set of points, where the
            coefficients of the convex combination are strictly greater than 0
