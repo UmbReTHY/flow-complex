@@ -14,7 +14,6 @@
 
 #include "critical_point.hpp"
 #include "descend_task.hpp"
-#include "point_cloud.hpp"
 #include "affine_hull.hpp"
 #include "nn_along_ray.hpp"
 #include "update_ray.hpp"
@@ -87,7 +86,7 @@ public:
                                         get_next, nnvec.begin(), nnvec.begin() +
                                         (pc.dim() + 1 - _ah.size()));
       } catch(std::exception & e) {
-        std::printf("error: %s\n", e.what());
+        std::fprintf(std::stderr, "error: %s\n", e.what());
         std::exit(EXIT_FAILURE);
       }
       using dt = descend_task<point_cloud_type>;
