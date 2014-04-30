@@ -50,13 +50,13 @@ void print(FC::critical_point<number_type, size_type> const& cp) {
   printf("index of cp = %u\n", cp.index());
   if (!cp.is_max_at_inf()) {
     printf("\tpoint-indices: ");
-    for (auto it = cp.idx_cbegin(); it != cp.idx_cend(); ++it)
+    for (auto it = cp.idx_begin(); it != cp.idx_end(); ++it)
       printf("%u, ", *it);
     printf("\n");
     printf("\tnumber of successors: %ld\n",
-           std::distance(cp.succ_cbegin(), cp.succ_cend()));
+           std::distance(cp.succ_begin(), cp.succ_end()));
     printf("\ttheir distances: ");
-    for (auto it = cp.succ_cbegin(); it != cp.succ_cend(); ++it)
+    for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
       printf("%f, ", (*it)->dist());
     printf("\n");
   }

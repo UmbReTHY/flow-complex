@@ -91,7 +91,7 @@ public:
   */
   template <typename Derived1, typename Derived2>
   void project(Eigen::MatrixBase<Derived1> const& x,
-               Eigen::MatrixBase<Derived2> const& lambda) {
+               Eigen::MatrixBase<Derived2> const& lambda) const {
     assert(size() > 0);
     if (_members.size() > 1)
       _dyn_qr.solve(x, const_cast<Eigen::MatrixBase<Derived2> &>(lambda).tail(lambda.size() - 1));

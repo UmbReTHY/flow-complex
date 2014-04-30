@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <pair>
 #include <utility>
 #include <random>
 #include <limits>
@@ -94,11 +93,12 @@ public:
       using dt = descend_task<point_cloud_type>;
       if (nn.second == std::numeric_limits<number_type>::infinity()) {
         assert(_ah.size() == pc.dim());
-        dth(dt(std::move(_ah), std::move(_location), cph(cp_type(pc.dim()))));
+        dth(dt(std::move(_ah), std::move(_location),
+               cph(cp_type(pc.dim())).second));
         break;  // EXIT 1
       } else {
         _location += nn.second * _ray;
-        for (auto it = nnvec.begin(); it != r.first; ++it)
+        for (auto it = nnvec.begin(); it != nn.first; ++it)
           _ah.add_point(*it);
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
@@ -122,11 +122,12 @@ public:
                 // TODO maybe pass the recently dropped indices
                 for (auto it = ++_ah.begin(); it != _ah.end(); ++it) {
                   auto new_ah = _ah;
-                  new_ah.drop_point(m);
-                  dth(std::move(new_ah), eigen_vector(_location), max_ptr);
+                  new_ah.drop_point(*it);
+                  dth(dt(std::move(new_ah), eigen_vector(_location), max_ptr));
                 }
                 // reuse this task's affine hull for one of the descent tasks
-                dth(std::move(_ah), std::move(_location), max_ptr);
+                _ah.drop_point(*_ah.begin());
+                dth(dt(std::move(_ah), std::move(_location), max_ptr));
               }
             }
             break;    // EXIT 2 - none have been dropped -> finite max

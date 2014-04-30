@@ -5,8 +5,8 @@
 #include <cstddef>
 
 #include <limits>
-#include <pair>
 #include <stdexcept>
+#include <utility>
 
 #include <Eigen/Core>
 

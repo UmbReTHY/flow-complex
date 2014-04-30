@@ -37,7 +37,7 @@ public:
                  self_type * succ)
     : critical_point(idx_begin, idx_end, dist),
       _successors(&succ, &(succ) + 1) {
-    assert(successor);
+    assert(succ);
   }
   
   // constructor for cp at inf

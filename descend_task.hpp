@@ -3,7 +3,7 @@
 
 #include <utility>
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
 
 #include "critical_point.hpp"
 #include "affine_hull.hpp"

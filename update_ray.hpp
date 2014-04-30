@@ -1,6 +1,10 @@
 #ifndef UPDATE_RAY_HPP_
 #define UPDATE_RAY_HPP_
 
+#include <Eigen/Core>
+
+#include "affine_hull.hpp"
+
 namespace FC {
 /**
   @param lambda vector of at least ah.size() elements
@@ -11,6 +15,7 @@ void update_ray(affine_hull<PointCloud> const& ah,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & lambda,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & driver,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & ray) {
+  using size_type = typename affine_hull<PointCloud>::size_type;
   ah.project(x, lambda.head(ah.size()));
   driver.setZero();
   auto m_it = ah.begin();
