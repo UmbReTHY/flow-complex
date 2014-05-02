@@ -2,13 +2,14 @@
 #define NN_ALONG_RAY_HPP_
 
 #include <cassert>
-#include <cstddef>
 
 #include <limits>
 #include <stdexcept>
 #include <utility>
 
 #include <Eigen/Core>
+
+#include "vertex_filter.hpp"
 
 namespace FC {
 
@@ -20,14 +21,15 @@ namespace FC {
                     the given range, an exception is thrown.
 */
 template <typename Derived1, typename Derived2, typename Derived3,
-          typename F, typename NNIterator>
+          typename PointCloud, typename NNIterator>
 std::pair<NNIterator, typename Derived1::Scalar>
 nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
                            Eigen::MatrixBase<Derived2> const& v,
                            Eigen::MatrixBase<Derived3> const& p,
-                           F & get_next,
+                           vertex_filter<PointCloud> & get_next,
                            NNIterator begin, NNIterator end) {
   using number_type = typename Derived1::Scalar;
+  using vf_type = vertex_filter<PointCloud>;
   static_assert(std::numeric_limits<number_type>::has_infinity,
                 "number_type needs to have a representation for infinity");
   // compute some values that don't depend on the candidate points
@@ -36,7 +38,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
   number_type const v_p = v.dot(p);
   // init return value
   auto r = std::make_pair(begin, std::numeric_limits<number_type>::infinity());
-  std::size_t q_idx;
+  typename vf_type::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
   while (q_ptr) {
     auto & q = *q_ptr;

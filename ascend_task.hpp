@@ -17,6 +17,7 @@
 #include "affine_hull.hpp"
 #include "nn_along_ray.hpp"
 #include "update_ray.hpp"
+#include "vertex_filter.hpp"
 
 namespace FC {
 
@@ -67,26 +68,14 @@ public:
     eigen_vector lambda(pc.dim() + 1);
     do {
       // TODO respect dropped indices
-      size_type curr_idx = 0;  // for lambda below
-      auto get_next = [&](std::size_t * idx_ptr) {
-        while (_ah.end() != std::find(_ah.begin(),
-                                               _ah.end(), curr_idx))
-          ++curr_idx;  // skip affine hull members
-        if (curr_idx < pc.size()) { // valid index
-          assert(idx_ptr);
-          *idx_ptr = curr_idx;
-          return &pc[curr_idx++];  // this ++ is important!!!
-        } else {
-          return static_cast<decltype(&pc[curr_idx])>(nullptr);
-        }
-      };
+      auto vf = make_vertex_filter(_ah);
       auto nn = std::make_pair(nnvec.begin(), number_type(0));
       try {
         nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
-                                        get_next, nnvec.begin(), nnvec.begin() +
+                                        vf, nnvec.begin(), nnvec.begin() +
                                         (pc.dim() + 1 - _ah.size()));
       } catch(std::exception & e) {
-        std::fprintf(std::stderr, "error: %s\n", e.what());
+        std::fprintf(stderr, "error: %s\n", e.what());
         std::exit(EXIT_FAILURE);
       }
       using dt = descend_task<point_cloud_type>;
