@@ -4,7 +4,6 @@
 #include <cassert>
 
 #include <iterator>
-#include <limits>
 #include <tuple>
 #include <vector>
 
@@ -20,15 +19,17 @@ namespace FC {
 */
 template <typename _number_type, typename _size_type, bool Aligned>
 class point_cloud {
-  using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
-  using eigen_map = Eigen::Map<eigen_vector const, eigen_align<Aligned>::value>;
-  using pt_cont = std::vector<eigen_map>;
+using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
 
-  public:
-    typedef _number_type                     number_type;
-    typedef _size_type                       size_type;
-    typedef typename pt_cont::const_iterator iterator;
-  
+public:
+  typedef _number_type                            number_type;
+  typedef _size_type                              size_type;
+  typedef Eigen::Map<eigen_vector const,
+                     eigen_align<Aligned>::value> eigen_map;
+private:
+  using pt_cont = std::vector<eigen_map>;
+public:
+  typedef typename pt_cont::const_iterator        iterator;
     /**
       @tparam Iterator when dereferenced, returns a pointer to number_type
     */
@@ -77,13 +78,15 @@ class point_cloud {
     std::tuple<size_type, number_type, bool>
     nearest_neighbor(Eigen::MatrixBase<Derived> const& q) const {
       auto r = std::make_tuple(size_type(0),
-                               std::numeric_limits<number_type>::infinity(),
+                               number_type(0),
                                false);
+      bool nn_found = false;
       for (size_type i = 0; i < _points.size(); ++i) {
         number_type tmp = (q - _points[i]).squaredNorm();
-        if (tmp < std::get<1>(r)) {
+        if ((not nn_found) or (tmp < std::get<1>(r))) {
           std::get<1>(r) = tmp;
           std::get<0>(r) = i;
+          nn_found = true;
         } else if (tmp == std::get<1>(r)) {
           std::get<2>(r) = true;
         }

@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <iterator>
-#include <limits>
 #include <vector>
 
 namespace FC {
@@ -86,9 +85,11 @@ public:
     return _indices.empty();
   }
   
+  /**
+    @return if is_max_at_inf() is true, then the result is undefined
+  */
   number_type dist() const noexcept {
-    return (is_max_at_inf() ? std::numeric_limits<number_type>::infinity()
-                            : _dist);
+    return _dist;
   }
   
   size_type index() const noexcept {

@@ -7,7 +7,6 @@
 
 #include <utility>
 #include <random>
-#include <limits>
 #include <exception>
 
 #include <Eigen/Core>
@@ -79,7 +78,7 @@ public:
         std::exit(EXIT_FAILURE);
       }
       using dt = descend_task<point_cloud_type>;
-      if (nn.second == std::numeric_limits<number_type>::infinity()) {
+      if (nn.first == nnvec.begin()) {
         assert(_ah.size() == pc.dim());
         dth(dt(std::move(_ah), std::move(_location),
                cph(cp_type(pc.dim())).second));

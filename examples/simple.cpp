@@ -59,6 +59,8 @@ void print(FC::critical_point<number_type, size_type> const& cp) {
     for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
       printf("%f, ", (*it)->dist());
     printf("\n");
+    printf("\tdist = %f\n", cp.dist());
+  } else {
+    printf("\tdist = inf\n");
   }
-  printf("\tdist = %f\n", cp.dist());
 }

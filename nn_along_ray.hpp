@@ -3,7 +3,6 @@
 
 #include <cassert>
 
-#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -30,26 +29,24 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
                            NNIterator begin, NNIterator end) {
   using number_type = typename Derived1::Scalar;
   using vf_type = vertex_filter<PointCloud>;
-  static_assert(std::numeric_limits<number_type>::has_infinity,
-                "number_type needs to have a representation for infinity");
   // compute some values that don't depend on the candidate points
   number_type const x_p = x.dot(p);
   number_type const p_p = p.dot(p);
   number_type const v_p = v.dot(p);
   // init return value
-  auto r = std::make_pair(begin, std::numeric_limits<number_type>::infinity());
+  auto r = std::make_pair(begin, number_type(0));
   typename vf_type::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
   while (q_ptr) {
     auto & q = *q_ptr;
     number_type const tmp = (v_p - q.dot(v));
     if (0 == tmp)
-      throw std::runtime_error("division by 0");
+      throw std::logic_error("division by 0");
     number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
-    if (t > 0 and t <= r.second) {
-      if (t == r.second) {
+    if (t > 0 and (r.first == begin or t <= r.second)) {
+      if (r.first != begin and t == r.second) {
         if (r.first == end)
-          throw std::runtime_error("too many nearest neighbors");
+          throw std::logic_error("too many nearest neighbors");
       } else {
         r.first = begin;
         r.second = t;
