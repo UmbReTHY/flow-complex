@@ -12,6 +12,7 @@ template <typename PointCloud>
 struct vertex_filter {
   typedef typename PointCloud::size_type size_type;
   typedef typename PointCloud::eigen_map eigen_map;
+  // TODO: respect dropped indices
   vertex_filter(affine_hull<PointCloud> const& ah) : _ah(ah), _curr_idx(0) {
   }
   

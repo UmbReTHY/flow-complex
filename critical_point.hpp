@@ -27,16 +27,17 @@ public:
 
   // constructor for finite maxima
   template <typename IdxIterator>
-  critical_point(IdxIterator idx_begin, IdxIterator idx_end, number_type dist)
-    : _indices(idx_begin, idx_end), _dist(dist) {
+  critical_point(IdxIterator idx_begin, IdxIterator idx_end,
+                 number_type sq_dist)
+    : _indices(idx_begin, idx_end), _sq_dist(sq_dist) {
     std::sort(_indices.begin(), _indices.end());
   }
   
   // constructor for regular cps
   template <typename IdxIterator>
-  critical_point(IdxIterator idx_begin, IdxIterator idx_end, number_type dist,
-                 self_type * succ)
-    : critical_point(idx_begin, idx_end, dist),
+  critical_point(IdxIterator idx_begin, IdxIterator idx_end,
+                 number_type sq_dist, self_type * succ)
+    : critical_point(idx_begin, idx_end, std::move(sq_dist)),
       _successors(&succ, &(succ) + 1) {
     assert(succ);
   }
@@ -47,8 +48,18 @@ public:
   }
 
   // constructors and assignment-operators
+  critical_point(critical_point && tmp) : _indices(std::move(tmp._indices)),
+    _successors(std::move(tmp._successors)) {
+    if (is_max_at_inf())
+      _index = std::move(tmp._index);
+    else
+      _sq_dist = std::move(tmp._sq_dist);
+  }
+  
+  ~critical_point() {
+  }
+  
   critical_point(critical_point const&) = delete;
-  critical_point(critical_point &&) = default;
   critical_point & operator=(critical_point const&) = delete;
   critical_point & operator=(critical_point &&) = delete;
 
@@ -88,8 +99,8 @@ public:
   /**
     @return if is_max_at_inf() is true, then the result is undefined
   */
-  number_type dist() const noexcept {
-    return _dist;
+  number_type sq_dist() const noexcept {
+    return _sq_dist;
   }
   
   size_type index() const noexcept {
@@ -101,8 +112,8 @@ private:
   idx_container  _indices;
   succ_container _successors;
   union {
-    _number_type const _dist;  // for regular cps
-    _size_type const _index;   // for cp at inf
+    _number_type _sq_dist;  // for regular cps
+    _size_type   _index;   // for cp at inf
   };
 };
 

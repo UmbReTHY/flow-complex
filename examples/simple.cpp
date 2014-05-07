@@ -1,12 +1,13 @@
 // C headers
 #include <cstdint>
-#include <cstdio>
 
 // C++ headers
 #include <array>
+#include <iostream>
 
 // 3rd-party library headers
 #include <Eigen/Core>
+//#include <boost/multiprecision/gmp.hpp> 
 
 // local headers
 #include "critical_point.hpp"
@@ -20,7 +21,9 @@ void print(FC::critical_point<number_type, size_type> const&);
          library.
 */
 int main(int, char**) {
-  using number_type = double;
+//  namespace mp = boost::multiprecision;
+//  using number_type = mp::number<mp::gmp_float<1000>, mp::et_off>;
+  using number_type = long double;
   using size_type = std::uint32_t;
   
   size_type const NUM_PTS = 1000;
@@ -46,21 +49,22 @@ int main(int, char**) {
 
 template <typename number_type, typename size_type>
 void print(FC::critical_point<number_type, size_type> const& cp) {
-  using std::printf;
-  printf("index of cp = %u\n", cp.index());
+  using std::cout;
+  cout << "index of cp = " << cp.index() << '\n';
   if (!cp.is_max_at_inf()) {
-    printf("\tpoint-indices: ");
+    cout << "\tpoint-indices: ";
     for (auto it = cp.idx_begin(); it != cp.idx_end(); ++it)
-      printf("%u, ", *it);
-    printf("\n");
-    printf("\tnumber of successors: %ld\n",
-           std::distance(cp.succ_begin(), cp.succ_end()));
-    printf("\ttheir distances: ");
+      cout << *it << ", ";
+    cout << '\n';
+    cout << "\tnumber of successors: "
+         << std::distance(cp.succ_begin(), cp.succ_end()) << '\n';
+    cout << "\ttheir squared distances: ";
     for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
-      printf("%f, ", (*it)->dist());
-    printf("\n");
-    printf("\tdist = %f\n", cp.dist());
+      cout << (*it)->sq_dist() << ", ";
+    cout << '\n';
+    cout << "\tsquared dist = " << cp.sq_dist();
   } else {
-    printf("\tdist = inf\n");
+    cout << "\tdist = inf";
   }
+  cout << std::endl;
 }

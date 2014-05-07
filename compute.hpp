@@ -39,7 +39,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   std::stack<at_type> qa;
   std::stack<dt_type> qd;
   // 2) create the handlers for task communication
-  auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
+//  auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
   auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};
   // 3) seed initial ascend task(s)
@@ -48,7 +48,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   while (not qa.empty()) {
     // TODO handle descend tasks
     at_type & at = qa.top();
-    at.execute(ath, dth, cph);
+    at.execute(dth, cph);
     qa.pop();
   }
   

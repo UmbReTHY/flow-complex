@@ -2,6 +2,7 @@
 #define DYNAMIC_QR_HPP_
 
 #include <cassert>
+#include <cstdint>
 
 #include <Eigen/Core>
 #include <Eigen/QR>
@@ -15,6 +16,7 @@ class dynamic_qr {
 
   public:
     typedef _number_type number_type;
+    typedef std::uint32_t size_type;
     
     template <typename size_type>
     dynamic_qr(size_type num_rows)
@@ -22,11 +24,13 @@ class dynamic_qr {
       assert(num_rows > 0);
     }
     
-    typename eigen_matrix::Index num_rows() const noexcept {
+    size_type num_rows() const noexcept {
+      assert(_A.rows() >= 0);
       return _A.rows();
     }
     
-    typename eigen_matrix::Index num_cols() const noexcept {
+    size_type num_cols() const noexcept {
+      assert(_A.cols() >= 0);
       return _A.cols();
     }
     

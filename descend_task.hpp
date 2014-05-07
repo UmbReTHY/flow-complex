@@ -9,6 +9,7 @@
 #include "critical_point.hpp"
 #include "affine_hull.hpp"
 #include "update_ray.hpp"
+#include "vertex_filter.hpp"
 
 namespace FC {
 
@@ -34,30 +35,15 @@ public:
     eigen_vector ray;
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
-    update_ray(_ah, _location, lambda, driver, ray);
+    update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
-//    // TODO dropped point storage does not have to be a member!
+    // TODO dropped point storage does not have to be a member!
+    auto vf = make_vertex_filter(_ah);
 //    do {
-//      // TODO respect dropped indices
-//      size_type curr_idx = 0;  // for lambda below
-//      auto get_next = [&](std::size_t * idx_ptr) {  // TODO dont redeclare the lambda each run of the loop
-//        assert(idx_ptr);
-//        while (_ah.end() != std::find(_ah.begin(), _ah.end(), curr_idx))
-//          ++curr_idx;  // skip affine hull members
-//        // TODO insert (also in ascend task) return var to avoid cast below
-//        decltype(&pc[curr_idx]) r;
-//        if (curr_idx < pc.size()) { // valid index
-//          *idx_ptr = curr_idx;
-//          r = &pc[curr_idx++];  // this ++ is important!!!
-//        } else {
-//          r = nullptr;
-//        }
-//        return r;
-//      };
 //      auto nn = std::make_pair(nnvec.begin(), number_type(0));
 //      try {
 //        nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
-//                                        get_next, nnvec.begin(), nnvec.begin() +
+//                                        vf, nnvec.begin(), nnvec.begin() +
 //                                        (pc.dim() + 1 - _ah.size()));
 //      } catch(std::exception & e) {
 //        std::fprintf(stderr, "error: %s\n", e.what());
@@ -111,6 +97,8 @@ public:
 //          update_ray(_ah, _location, lambda, driver, _ray);
 //        }
 //      }
+//      vf.reset();  // make the vertex filter consider all points
+//                   // of the point cloud again on subsequent calls
 //    } while(true);
   }
   
