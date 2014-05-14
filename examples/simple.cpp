@@ -7,7 +7,7 @@
 
 // 3rd-party library headers
 #include <Eigen/Core>
-//#include <boost/multiprecision/gmp.hpp> 
+#include <boost/multiprecision/gmp.hpp> 
 
 // local headers
 #include "critical_point.hpp"
@@ -21,9 +21,9 @@ void print(FC::critical_point<number_type, size_type> const&);
          library.
 */
 int main(int, char**) {
-//  namespace mp = boost::multiprecision;
-//  using number_type = mp::number<mp::gmp_float<1000>, mp::et_off>;
-  using number_type = long double;
+  namespace mp = boost::multiprecision;
+  using number_type = mp::number<mp::gmp_float<256>, mp::et_off>;
+//  using number_type = float;
   using size_type = std::uint32_t;
   
   size_type const NUM_PTS = 1000;
@@ -40,8 +40,7 @@ int main(int, char**) {
   using cmap = Eigen::Map<eigen_vector const>;
 
   auto fc = FC::compute_flow_complex<size_type, false>
-            (points.cbegin(), points.cend(), DIM, 
-             /* nr of threads */ 8, /* numerical tolerance */ 1.e-5);
+            (points.cbegin(), points.cend(), DIM, /* nr of threads */ 8);
   
   for (auto const& cp : fc)
     print(cp);

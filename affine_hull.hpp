@@ -44,16 +44,17 @@ public:
     _members.push_back(idx);
   }
   
-  template <typename Index>
-  void drop_point(Index const idx) {
-    assert(is_member(idx));
-    auto const it = std::find(_members.begin(), _members.end(), idx);
+  /**
+    @brief invalidates all iterators at and after it
+  */
+  void drop_point(iterator it) {
+    assert(is_member(it));
     if (_members.size() > 1) {
       bool const del_orig = _members.begin() == it;
       _dyn_qr.delete_column(del_orig ? 0 : // gets deleted because the point
                                            // corresponding to this column
                                            // will become the new origin
-                            std::distance(_members.begin(), it) - 1);
+                            std::distance(_members.cbegin(), it) - 1);
       // if there's at least one column left after deleting a member
       // we need to perform a rank-one update on it
       if (del_orig && _members.size() > 2) {
@@ -100,12 +101,38 @@ public:
   }
 
 private:
-  bool is_member(size_type const idx) const {
-    return _members.end() != std::find(_members.begin(), _members.end(), idx);
+  bool is_member(iterator it) const {
+    return (_members.begin() <= it) and (it < _members.end());
+  }
+
+  bool is_member(size_type const idx) const {  // TODO depcrecate/remove
+    return is_member(std::find(_members.begin(), _members.end(), idx));
+  }
+  
+  template <typename Index>
+  void drop_point(Index const idx) {  // TODO depcrecate/remove
+    assert(is_member(idx));
+    auto const it = std::find(_members.begin(), _members.end(), idx);
+    if (_members.size() > 1) {
+      bool const del_orig = _members.begin() == it;
+      _dyn_qr.delete_column(del_orig ? 0 : // gets deleted because the point
+                                           // corresponding to this column
+                                           // will become the new origin
+                            std::distance(_members.begin(), it) - 1);
+      // if there's at least one column left after deleting a member
+      // we need to perform a rank-one update on it
+      if (del_orig && _members.size() > 2) {
+        _dyn_qr.rank_one_update(_pc[_members.front()] - _pc[_members[1]],
+                                eigen_vector::Ones(_dyn_qr.num_cols()));
+      }
+    }
+    _members.erase(it);
+    assert((_members.empty() && _dyn_qr.num_cols() == 0) ||
+           _members.size() == _dyn_qr.num_cols() + 1);
   }
 
   dynamic_qr<number_type> _dyn_qr;
-  std::vector<size_type> _members;  // TODO write own dynarray class, to save the capacity pointer
+  member_container _members;  // TODO write own dynarray class, to save the capacity pointer
   point_cloud_type const& _pc;
 };
 

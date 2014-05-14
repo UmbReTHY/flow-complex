@@ -17,14 +17,12 @@ template <typename size_type,    // type that is capable of holding the indices
           bool Aligned = false,
           typename PointIterator,
           typename dim_type,
-          typename num_threads_t,
-          typename num_tol_t>
+          typename num_threads_t>
 flow_complex<typename base_t<decltype((*PointIterator())[0])>::type,
              size_type>
 compute_flow_complex (PointIterator begin, PointIterator end,
                       dim_type dim,
-                      num_threads_t /*num_threads*/,
-                      num_tol_t /*num_tolerance*/) {
+                      num_threads_t /*num_threads*/) {
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;

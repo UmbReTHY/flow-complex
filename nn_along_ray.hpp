@@ -37,13 +37,14 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
   auto r = std::make_pair(begin, number_type(0));
   typename vf_type::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
+  constexpr double TOL = 1e-200;
   while (q_ptr) {
     auto & q = *q_ptr;
     number_type const tmp = (v_p - q.dot(v));
     if (0 == tmp)
       throw std::logic_error("division by 0");
     number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
-    if (t > 0 and (r.first == begin or t <= r.second)) {
+    if (t > (TOL) and (r.first == begin or t <= r.second)) {
       if (r.first != begin and t == r.second) {
         if (r.first == end)
           throw std::logic_error("too many nearest neighbors");

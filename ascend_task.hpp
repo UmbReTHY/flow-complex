@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdio>
 
+#include <algorithm>
 #include <utility>
 #include <random>
 #include <exception>
@@ -41,6 +42,7 @@ public:
     } while (std::get<2>(nn));
     // add the nearest neighbor
     _ah.add_point(std::get<0>(nn));
+    std::cout << "added idx: " << std::get<0>(nn) << std::endl;
     // set the ray
     _ray = pc[*_ah.begin()] - _location;
   }
@@ -59,6 +61,7 @@ public:
   */
   template <typename DTHandler, typename CPHandler>
   void execute(DTHandler & dth, CPHandler & cph) {
+    std::cout << "running ascend task..." << std::endl;
     auto const& pc = _ah.pc();
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
     eigen_vector driver(pc.dim());
@@ -88,17 +91,25 @@ public:
         break;  // EXIT 1
       } else {
         _location += nn.second * _ray;
-        for (auto it = nnvec.begin(); it != nn.first; ++it)
+        for (auto it = nnvec.begin(); it != nn.first; ++it) {
           _ah.add_point(*it);
+          std::cout << "added idx: " << *it
+                    << " with t = " << nn.second << std::endl;
+        }
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
           _ah.project(_location, lambda);
           // drop negative indices
-          auto m_it = _ah.begin();
-          for (size_type i = 0; i < lambda.size(); ++i) {
-            if (lambda[i] < 0)
-              _ah.drop_point(*m_it);
-            m_it++;
+          auto m_it = _ah.begin() + _ah.size();
+          for (size_type i = lambda.size(); i-- > 0;) {
+            --m_it;
+            if (lambda[i] < 0) {
+              assert(_ah.begin() <= m_it);
+              assert(m_it < _ah.end());
+              std::cout << "dropped idx: " << *m_it
+                        << " with lambda_i = " << lambda[i] << std::endl;
+              _ah.drop_point(m_it);
+            }
           }
           if (_ah.size() == pc.dim() + 1) {  // no points dropped
             number_type sq_dist((_location - pc[*_ah.begin()]).squaredNorm());
@@ -106,13 +117,13 @@ public:
                                       std::move(sq_dist)));
             if (r_pair.first) {  // only spawn descends for new maxima
               auto max_ptr = r_pair.second;
-              for (auto it = ++_ah.begin(); it != _ah.end(); ++it) {
+              for (size_type offset = 1; offset < _ah.size(); ++offset) {
                 auto new_ah = _ah;
-                new_ah.drop_point(*it);
+                new_ah.drop_point(new_ah.begin() + offset);
                 dth(dt(std::move(new_ah), eigen_vector(_location), max_ptr));
               }
               // reuse this task's affine hull for one of the descent tasks
-              _ah.drop_point(*_ah.begin());
+              _ah.drop_point(_ah.begin());
               dth(dt(std::move(_ah), std::move(_location), max_ptr));
             }
             break;    // EXIT 2 - none have been dropped -> finite max
@@ -141,23 +152,30 @@ private:
            
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
-    using Float = long double;
+    std::cout << "generating random point..." << std::endl;
+    using Float = float;
     std::random_device rd;
     std::mt19937 gen(rd());
-    // it's important for the lower bound not to be 0, otherwise some points
-    // might not take part in the convex combination and the seed point would be
-    // located on the convex hull, thus getting stuck during subsequent ascends
-    // and not reaching a maximum
-    std::uniform_real_distribution<Float> dis(0.5, 1.0);
-    Float sum(0.0);
+    // generates numbers in [0, pc.size() - 1]
+    std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
+    std::vector<size_type> sampled_indices;
+    sampled_indices.reserve(pc.dim() + 1);
+    auto already_sampled = [&sampled_indices] (size_type idx) {
+      return sampled_indices.end() != std::find(sampled_indices.begin(),
+                                                sampled_indices.end(), idx);
+    };
     target.setZero();
-    Float tmp;
-    for (auto const& p : pc) {
-      tmp = dis(gen);
-      sum += tmp;
-      target = tmp * p;
+    Float const fraction = 1.0 / (pc.dim() + 1);
+    for (size_type i = 0; i < pc.dim() + 1; ++i) {
+      size_type idx;
+      do {
+        idx = rand_idx(gen);
+        assert(0 <= idx);
+        assert(idx < pc.size());
+      } while(already_sampled(idx));
+      sampled_indices.push_back(idx);
+      target += fraction * pc[idx];
     }
-    target /= sum;
   }
 
   affine_hull<point_cloud_type> _ah;
