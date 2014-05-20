@@ -42,7 +42,6 @@ public:
     } while (std::get<2>(nn));
     // add the nearest neighbor
     _ah.add_point(std::get<0>(nn));
-    std::cout << "added idx: " << std::get<0>(nn) << std::endl;
     // set the ray
     _ray = pc[*_ah.begin()] - _location;
   }
@@ -61,7 +60,6 @@ public:
   */
   template <typename DTHandler, typename CPHandler>
   void execute(DTHandler & dth, CPHandler & cph) {
-    std::cout << "running ascend task..." << std::endl;
     auto const& pc = _ah.pc();
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
     eigen_vector driver(pc.dim());
@@ -93,8 +91,6 @@ public:
         _location += nn.second * _ray;
         for (auto it = nnvec.begin(); it != nn.first; ++it) {
           _ah.add_point(*it);
-          std::cout << "added idx: " << *it
-                    << " with t = " << nn.second << std::endl;
         }
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
@@ -106,8 +102,6 @@ public:
             if (lambda[i] < 0) {
               assert(_ah.begin() <= m_it);
               assert(m_it < _ah.end());
-              std::cout << "dropped idx: " << *m_it
-                        << " with lambda_i = " << lambda[i] << std::endl;
               _ah.drop_point(m_it);
             }
           }
@@ -152,7 +146,6 @@ private:
            
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
-    std::cout << "generating random point..." << std::endl;
     using Float = float;
     std::random_device rd;
     std::mt19937 gen(rd());

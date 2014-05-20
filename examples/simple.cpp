@@ -22,8 +22,8 @@ void print(FC::critical_point<number_type, size_type> const&);
 */
 int main(int, char**) {
   namespace mp = boost::multiprecision;
-  using number_type = mp::number<mp::gmp_float<256>, mp::et_off>;
-//  using number_type = float;
+//  using number_type = mp::number<mp::gmp_float<256>, mp::et_off>;
+  using number_type = double;
   using size_type = std::uint32_t;
   
   size_type const NUM_PTS = 1000;

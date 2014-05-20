@@ -37,7 +37,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
   auto r = std::make_pair(begin, number_type(0));
   typename vf_type::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
-  constexpr double TOL = 1e-200;
+  number_type const TOL(1e-12);
   while (q_ptr) {
     auto & q = *q_ptr;
     number_type const tmp = (v_p - q.dot(v));
