@@ -26,7 +26,7 @@ class dynamic_qr {
     */    
     template <typename size_type>
     dynamic_qr(size_type num_rows)
-      : _q(num_rows, num_rows),
+      : _q(eigen_matrix::Identity(num_rows, num_rows)),
         _r_raw(new number_type[num_rows * num_rows]),
         _r_begin(new number_type * [num_rows]), _r_end(_r_begin) {
       assert(num_rows > 0);
@@ -74,9 +74,8 @@ class dynamic_qr {
     template <typename DerivedVector>
     void append_column(Eigen::MatrixBase<DerivedVector> const& col) {
       assert(num_cols() < num_rows());
-      
       eigen_map new_col(*_r_end, num_rows());
-      new_col = col;
+      new_col = _q.transpose() * col;
       number_type c, s;
       for (size_type i = num_rows() - 1; i-- > num_cols();) {
         // i is the index of 'a' in the givens routine
@@ -97,12 +96,12 @@ class dynamic_qr {
       if (pos != num_cols() - 1) {
         // move all columns right of pos one to the left
         number_type * tmp = _r_begin[pos];
-        for (size_type i = pos; i < num_cols() - 1; ++i)
+        for (size_type i = pos, max = num_cols() - 1; i < max; ++i)
           _r_begin[i] = _r_begin[i + 1];
         --_r_end;  // num_cols() is now up-to-date again
         *_r_end = tmp;  // restored the address of the deleted column
         // R is now upper Hessenberg starting at column pos
-        hessenberg_update(pos);
+        hessenberg_update(pos, num_cols());
       } else {
         --_r_end;
       }
@@ -117,13 +116,22 @@ class dynamic_qr {
                          Eigen::MatrixBase<DerivedVector2> const& v) {
       assert(size_type(u.rows()) == num_rows());
       assert(size_type(v.rows()) == num_cols());
-//      _A += u * v.transpose();
+      
+      // we now need to actually zero the subdiagonal entries, since we
+      // access those during the updates of R
+      for (size_type i = 0; i < (num_cols() - 1); ++i)
+        _r_begin[i][i + 1] = 0;
+      bool const is_not_square = num_rows() > num_cols();
+      if (is_not_square)  // only the the last column has a sub-diagonal element
+        _r_begin[num_cols() - 1][num_cols()] = 0;
+      
       eigen_vector w = _q.transpose() * u;
       number_type c ,s;
       for (size_type i = num_rows() - 1; i-- > 0;) {
         givens(w[i], w[i + 1], &c, &s);
         apply_half_givens(c, s, w.data(), i);  // clear element i + 1 of w
-        apply_givens(c, s, i, num_cols(), i);
+        if (i < num_cols())
+          apply_givens(c, s, i, i);
         update_q(c, s, i);
       }
       // compute H = R + w * v^T
@@ -131,7 +139,7 @@ class dynamic_qr {
       for (size_type i = 0; i < num_cols(); ++i)
         _r_begin[i][0] += w[0] * v[i];
       // R is now upper Hessenberg
-      hessenberg_update(0);
+      hessenberg_update(0, (is_not_square ? num_cols() : num_cols() - 1));  // TODO check if that case is handeld by that function internally automatically
     }
     
      /**
@@ -175,15 +183,13 @@ class dynamic_qr {
           *s = 1 / std::sqrt(1 + (tau * tau));
           *c = *s * tau;
         } else {
-          number_type const tau = -a / b;
+          number_type const tau = -b / a;
           *c = 1 / std::sqrt(1 + (tau * tau));
           *s = *c * tau;
         }
       }
       assert(std::abs(*c) <= 1);
       assert(std::abs(*s) <= 1);
-      using namespace Eigen::internal;
-      assert(isApprox(1.0, double(*c * *c + *s * *s)));
     }
     
     void update_q(number_type const& c, number_type const& s, size_type k) {
@@ -193,7 +199,7 @@ class dynamic_qr {
       number_type tmp;    
       for (typename eigen_matrix::Index i = 0; i < _q.cols(); ++i) {
         tmp = c * _q(i, k) - s * _q(i, k + 1);
-        _q(i, k + 1) = s * _q(i, k) + c * _q(i, k);
+        _q(i, k + 1) = s * _q(i, k) + c * _q(i, k + 1);
         _q(i, k) = tmp;
       }
     }
@@ -208,16 +214,14 @@ class dynamic_qr {
     }
     
     void apply_givens(number_type const& c, number_type const& s,
-                      size_type r_col_begin, size_type r_col_end,
-                      size_type a_idx) {
+                      size_type r_col_begin, size_type a_idx) {
       assert(0 <= r_col_begin);
-      assert(r_col_begin <= r_col_end);
-      assert(r_col_end <= num_cols());
+      assert(r_col_begin <= num_cols());
       assert(0 <= a_idx);
       assert(a_idx < num_rows() - 1);
 
       number_type tmp;
-      for (size_type j = r_col_begin; j < r_col_end; ++j) {
+      for (size_type j = r_col_begin; j < num_cols(); ++j) {
         tmp = c * _r_begin[j][a_idx] - s * _r_begin[j][a_idx + 1];
         _r_begin[j][a_idx + 1] = s * _r_begin[j][a_idx] +
                                  c * _r_begin[j][a_idx + 1];
@@ -225,12 +229,15 @@ class dynamic_qr {
       };
     }
     
-    void hessenberg_update(size_type k) {
+    /**
+      @param col_end the index of the column past the last column to update
+    */
+    void hessenberg_update(size_type k, size_type col_end) {
       number_type c, s;
-      for (size_type i = k; i < num_cols(); ++i) {
+      for (size_type i = k; i < col_end; ++i) {
         givens(_r_begin[i][i], _r_begin[i][i + 1], &c, &s);
         apply_half_givens(c, s, _r_begin[i], i);
-        apply_givens(c, s, i + 1, num_cols(), i);
+        apply_givens(c, s, i + 1, i);
         update_q(c, s, i);
       }
     }
