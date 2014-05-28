@@ -18,6 +18,7 @@
 #include "nn_along_ray.hpp"
 #include "update_ray.hpp"
 #include "vertex_filter.hpp"
+#include "utility.hpp"
 
 namespace FC {
 
@@ -94,30 +95,13 @@ public:
         }
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
-          _ah.project(_location, lambda);
-          // drop negative indices
-          auto m_it = _ah.begin() + _ah.size();
-          for (size_type i = lambda.size(); i-- > 0;) {
-            --m_it;
-            if (lambda[i] < 0) {
-              assert(_ah.begin() <= m_it);
-              assert(m_it < _ah.end());
-              _ah.drop_point(m_it);
-            }
-          }
-          if (_ah.size() == pc.dim() + 1) {  // no points dropped
+          if (not drop_neg_coeffs(_location, lambda, _ah)) {  // no points dropped
             number_type sq_dist((_location - pc[*_ah.begin()]).squaredNorm());
             auto r_pair = cph(cp_type(_ah.begin(), _ah.end(),
                                       std::move(sq_dist)));
             if (r_pair.first) {  // only spawn descends for new maxima
               auto max_ptr = r_pair.second;
-              for (size_type offset = 1; offset < _ah.size(); ++offset) {
-                auto new_ah = _ah;
-                new_ah.drop_point(new_ah.begin() + offset);
-                dth(dt(std::move(new_ah), eigen_vector(_location), max_ptr));
-              }
-              // reuse this task's affine hull for one of the descent tasks
-              _ah.drop_point(_ah.begin());
+              spawn_sub_descends(dth, _location, _ah.size(), max_ptr, _ah);
               dth(dt(std::move(_ah), std::move(_location), max_ptr));
             }
             break;    // EXIT 2 - none have been dropped -> finite max

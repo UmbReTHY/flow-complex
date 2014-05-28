@@ -139,7 +139,7 @@ class dynamic_qr {
       for (size_type i = 0; i < num_cols(); ++i)
         _r_begin[i][0] += w[0] * v[i];
       // R is now upper Hessenberg
-      hessenberg_update(0, (is_not_square ? num_cols() : num_cols() - 1));  // TODO check if that case is handeld by that function internally automatically
+      hessenberg_update(0, (is_not_square ? num_cols() : num_cols() - 1));
     }
     
      /**
