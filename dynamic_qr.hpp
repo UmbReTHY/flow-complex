@@ -30,13 +30,22 @@ class dynamic_qr {
         _r_raw(new number_type[num_rows * num_rows]),
         _r_begin(new number_type * [num_rows]), _r_end(_r_begin) {
       assert(num_rows > 0);
-      for (size_type i = 0; i < num_rows; ++i)
-        _r_begin[i] = _r_raw + i * num_rows;
+      init_row_ptr();
     }
     
     // copy-constructor
-    dynamic_qr(dynamic_qr const&) = default;
-    dynamic_qr & operator=(dynamic_qr const&) = default;
+    dynamic_qr(dynamic_qr const& orig)
+      // note: orig.num_rows() == maximum number of columns possible
+      : _q(orig._q), _r_raw(nullptr),
+        _r_begin(new number_type * [orig.num_rows()]),
+        _r_end(_r_begin + orig.num_cols()) {
+      size_type const num_elements = orig.num_rows() * orig.num_rows();
+      _r_raw = new number_type[num_elements];
+      init_row_ptr();
+      std::copy(orig._r_raw, orig._r_raw + num_elements, _r_raw);
+    }
+
+    dynamic_qr & operator=(dynamic_qr const&) = delete;
     
     // move-constructor
     dynamic_qr(dynamic_qr && tmp)
@@ -172,6 +181,18 @@ class dynamic_qr {
     }
     
   private:
+    /**
+      @brief helper function to avoid code duplication in constructors
+    */
+    void init_row_ptr() {
+      size_type const max_cols = _q.cols();
+      auto const& num_rows = max_cols;
+      assert(nullptr != _r_raw);  // to make sure constructors initialized
+                                  // the storage
+      for (size_type i = 0; i < max_cols; ++i)
+        _r_begin[i] = _r_raw + i * num_rows;
+    }
+  
     void givens(number_type const& a, number_type const& b,
                 number_type * c, number_type * s) const {
       if (0.0 == b) {
