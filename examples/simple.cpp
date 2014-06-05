@@ -7,7 +7,7 @@
 
 // 3rd-party library headers
 #include <Eigen/Core>
-#include <boost/multiprecision/gmp.hpp> 
+//#include <boost/multiprecision/gmp.hpp> 
 
 // local headers
 #include "critical_point.hpp"
@@ -21,7 +21,7 @@ void print(FC::critical_point<number_type, size_type> const&);
          library.
 */
 int main(int, char**) {
-  namespace mp = boost::multiprecision;
+//  namespace mp = boost::multiprecision;
 //  using number_type = mp::number<mp::gmp_float<256>, mp::et_off>;
   using number_type = double;
   using size_type = std::uint32_t;
