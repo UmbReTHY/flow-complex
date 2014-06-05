@@ -40,11 +40,11 @@ template <typename PointCloud, typename Derived1, typename Derived2>
 bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
                      Eigen::MatrixBase<Derived2> const& lambda,
                      affine_hull<PointCloud> & ah) {
-  assert(lambda.size() == ah.size());
+  using size_type = typename affine_hull<PointCloud>::size_type;
+  assert(static_cast<size_type>(lambda.size()) == ah.size());
   ah.project(x, const_cast<Eigen::MatrixBase<Derived2> &>(lambda));
   auto m_it = ah.end();
-  using size_type = typename Eigen::MatrixBase<Derived2>::Index;
-  for (size_type i = lambda.size(); i-- > 0;) {
+  for (size_type i = static_cast<size_type>(lambda.size()); i-- > 0;) {
     --m_it;
     if (lambda[i] < 0) {
       assert(ah.begin() <= m_it);
@@ -52,7 +52,7 @@ bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
       ah.drop_point(m_it);
     }
   }
-  return lambda.size() != ah.size();
+  return static_cast<size_type>(lambda.size()) != ah.size();
 }
 
 /**

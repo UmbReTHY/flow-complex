@@ -55,7 +55,7 @@ public:
       return _points[idx];
     }
     
-    typename eigen_map::Index dim() const noexcept {
+    size_type dim() const noexcept {
       assert(not _points.empty() && "YOU CREATED AN EMPTY POINT CLOUD.");
       return _points[0].size();
     }
