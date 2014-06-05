@@ -25,7 +25,7 @@ public:
   typedef typename idx_container::const_iterator   idx_iterator;
   typedef typename succ_container::const_iterator succ_iterator;
 
-  // constructor for finite maxima
+  // constructor for finite maxima & idx 1 critical points
   template <typename IdxIterator>
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist)
@@ -37,9 +37,9 @@ public:
   template <typename IdxIterator>
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist, self_type * succ)
-    : critical_point(idx_begin, idx_end, std::move(sq_dist)),
-      _successors(&succ, &(succ) + 1) {
+    : critical_point(idx_begin, idx_end, std::move(sq_dist)) {  // TODO make delegated-to ctor the most general one
     assert(succ);
+    _successors.push_back(succ);
   }
   
   // constructor for cp at inf
