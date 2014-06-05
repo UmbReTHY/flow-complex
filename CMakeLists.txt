@@ -2,6 +2,7 @@ project(flow_complex)
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
+include(cotire)
 
 set (CMAKE_CXX_FLAGS "-std=c++11")
 set (CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra -g -O0")
