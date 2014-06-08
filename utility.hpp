@@ -47,6 +47,7 @@ bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
   for (size_type i = static_cast<size_type>(lambda.size()); i-- > 0;) {
     --m_it;
     if (lambda[i] < 0) {
+      std::cout << "NEG COEFF" << lambda[i] << std::endl;
       assert(ah.begin() <= m_it);
       assert(m_it < ah.end());
       ah.drop_point(m_it);
@@ -56,6 +57,7 @@ bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
 }
 
 /**
+  TODO this is not useful for descend tasks: one id should not be dropped
   @brief schedules descend tasks for every point but one that is dropped in
          the range. One point is dropped on ah directly and is intended to be
          reused in other tasks instead.

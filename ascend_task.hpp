@@ -47,18 +47,16 @@ public:
     _ray = pc[*_ah.begin()] - _location;
   }
   
-  ascend_task(affine_hull<point_cloud_type> && ah,
-              Eigen::Matrix<number_type, Eigen::Dynamic, 1> && location,
-              Eigen::Matrix<number_type, Eigen::Dynamic, 1> && ray)
+  // TODO reconsider these r-value references with respect to this constructor's usage in dt
+  ascend_task(affine_hull<point_cloud_type> ah,  // TODO remove copies here
+              Eigen::Matrix<number_type, Eigen::Dynamic, 1> location,
+              Eigen::Matrix<number_type, Eigen::Dynamic, 1> ray)
   : _ah(std::move(ah)) {
     assert(_ah.size() == _ah.pc().dim());  // should be at a (d-1) cp
     _location.swap(location);
     _ray.swap(ray);
   }
   
-  /**
-    @return true, if finite maximum, false if maximum at infinity
-  */
   template <typename DTHandler, typename CPHandler>
   void execute(DTHandler & dth, CPHandler & cph) {
     auto const& pc = _ah.pc();
@@ -143,7 +141,7 @@ private:
     };
     target.setZero();
     Float const fraction = 1.0 / (pc.dim() + 1);
-    for (size_type i = 0; i < pc.dim() + 1; ++i) {
+    for (size_type i = 0; i < pc.dim() + size_type(1); ++i) {
       size_type idx;
       do {
         idx = rand_idx(gen);

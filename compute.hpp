@@ -1,8 +1,10 @@
 #ifndef COMPUTE_HPP_
 #define COMPUTE_HPP_
 
+#include <algorithm>
 #include <stack>
 #include <utility>
+#include <vector>
 
 #include "flow_complex.hpp"
 #include "point_cloud.hpp"
@@ -30,24 +32,33 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   using at_type = ascend_task<pc_type>;
   using dt_type = descend_task<pc_type>;
 
-  fc_type fc(dim);
-  // TODO init fc with id-0 critical points
   // 1) init data structures
   pc_type pc(begin, end, dim);
+  fc_type fc(dim);
+  {  // init fc with id-0 critical points
+    std::vector<size_type> indices(pc.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    for (auto it = indices.cbegin(); it != indices.cend(); ++it)
+      cp_type(it, it + 1, 0);
+  }
   std::stack<at_type> qa;
   std::stack<dt_type> qd;
   // 2) create the handlers for task communication
-//  auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
+  auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
   auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};
   // 3) seed initial ascend task(s)
   qa.emplace(pc);
-  // 4) process all tasks
+  // 4) process all tasks - qa first = breadth first search
   while (not qa.empty()) {
-    // TODO handle descend tasks
     at_type & at = qa.top();
     at.execute(dth, cph);
     qa.pop();
+  }
+  while (not qd.empty()) {
+    dt_type & dt = qd.top();
+    dt.execute(dth, ath, cph);
+    qd.pop();
   }
   
   return fc;

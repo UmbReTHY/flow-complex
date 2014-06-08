@@ -45,21 +45,37 @@ public:
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
     using idx_iterator = typename affine_hull<point_cloud_type>::iterator;
     auto vf = make_vertex_filter(_ah);
+    
+    static int dt_id = 0;
+    dt_id++;
+    std::cout << "DESCEND_TASK_ID = " << dt_id << std::endl;
+    
     do {
+      std::cout << "_ah.size() = " << _ah.size() << std::endl;
+      std::cout << "HULL MEMBERS: ";
+      for (auto it = _ah.begin(); it != _ah.end(); ++it)
+        std::cout << *it << ", ";
+      std::cout << std::endl;
+    
       update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
       auto nn = std::make_pair(nnvec.begin(), number_type(0));
       try {
         nn = nearest_neighbor_along_ray(_location, ray, pc[*_ah.begin()],
                                         vf, nnvec.begin(), nnvec.begin() +
                                         (pc.dim() + 1 - _ah.size()));
+                                        
+        std::cout << "t = " << nn.second << std::endl;
+                                        
       } catch(std::exception & e) {
         std::fprintf(stderr, "error: %s\n", e.what());
         std::exit(EXIT_FAILURE);
       }
       if (nn.first == nnvec.begin() or nn.second > 1.0) {
+        std::cout << "DESCEND SUCCESSFUL\n";
         _location += nn.second * ray;
         // drop neg coeffs
         if (not drop_neg_coeffs(_location, lambda.head(_ah.size()), _ah)) {
+          std::cout << "WITHIN CONVEX HULL\n";
           auto const insert_pair = 
           cph(cp_type(_ah.begin(), _ah.end(),
                       (_location - _ah.pc()[*_ah.begin()]).squaredNorm(),
@@ -82,17 +98,26 @@ public:
             //      d - 1 cp even though the cp was already found
             break;  // EXIT 2
           }
+        } else {
+          std::cout << "WITHIN AFFINE HULL\n";
         }
       } else {
+        std::cout << "DESCEND GOT STOPPED\n";
         size_type const size_before = _ah.size();
-        for (auto it = nnvec.begin(); it != nn.first; ++it)
+        std::cout << "_ah.size() = " << _ah.size() << std::endl;
+        for (auto it = nnvec.begin(); it != nn.first; ++it) {
           _ah.add_point(*it);  // TODO convert add_point to append_point,
                                //      to fix that semantic. This influences
                                //      correctness of spawn_sub_descends
+          std::cout << "STOPPER-ID = " << *it << std::endl;
+        }
+        std::cout << "_ah.size() = " << _ah.size() << std::endl;
         spawn_sub_descends(dth, _location, size_before, _succ, _ah);
+        std::cout << "after sub-spawn: _ah.size() = " << _ah.size() << std::endl;
       }
       vf.reset();  // make the vertex filter consider all points
                    // of the point cloud again on subsequent calls
+      std::cout << "ONE MORE TURN\n";
     } while(true);
   }
   
