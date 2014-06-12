@@ -26,12 +26,16 @@ int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
   
-  size_type const NUM_PTS = 1000;
-  size_type const DIM     =    3;
+//  size_type const NUM_PTS = 1000;
+//  size_type const DIM     =    3;
+  size_type const NUM_PTS = 4;
+  size_type const DIM     =    2;
 
   // create a point cloud - uniform 1000 pt sampling of DIM-d space
   using eigen_matrix = Eigen::Matrix<number_type, Eigen::Dynamic, Eigen::Dynamic>;
   eigen_matrix data = eigen_matrix::Random(DIM, NUM_PTS);
+  data << 1.0, 0.5, 1.0, 6.0,
+          0.25, 1.5, 2.75, 1.5;
   std::array<number_type const*, NUM_PTS> points;
   for (size_type i = 0; i < NUM_PTS; ++i)
     points[i] = data.col(i).data();
@@ -51,6 +55,7 @@ void print(FC::critical_point<number_type, size_type> const& cp) {
   using std::cout;
   cout << "index of cp = " << cp.index() << '\n';
   if (!cp.is_max_at_inf()) {
+    std::cout << "address = " << &cp << std::endl;
     cout << "\tpoint-indices: ";
     for (auto it = cp.idx_begin(); it != cp.idx_end(); ++it)
       cout << *it << ", ";
@@ -58,8 +63,10 @@ void print(FC::critical_point<number_type, size_type> const& cp) {
     cout << "\tnumber of successors: "
          << std::distance(cp.succ_begin(), cp.succ_end()) << '\n';
     cout << "\ttheir squared distances: ";
-    for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
+    for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it) {
+      std::cout << "address = " << *it << " : ";
       cout << (*it)->sq_dist() << ", ";
+    }
     cout << '\n';
     cout << "\tsquared dist = " << cp.sq_dist();
   } else {

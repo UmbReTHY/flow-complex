@@ -44,7 +44,9 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
     if (0 == tmp)
       throw std::logic_error("division by 0");
     number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
+    std::cout << "t = " << t << " for id = " << q_idx << std::endl;
     if (t > (TOL) and (r.first == begin or t <= r.second)) {
+      std::cout << "t-DIFF = " << (t - r.second) << std::endl;
       if (r.first != begin and t == r.second) {
         if (r.first == end)
           throw std::logic_error("too many nearest neighbors");

@@ -95,7 +95,7 @@ public:
                Eigen::MatrixBase<Derived2> const& lambda) const {
     assert(size() > 0);
     if (_members.size() > 1)
-      _dyn_qr.solve(x, const_cast<Eigen::MatrixBase<Derived2> &>(lambda).tail(lambda.size() - 1));
+      _dyn_qr.solve(x - _pc[*begin()], const_cast<Eigen::MatrixBase<Derived2> &>(lambda).tail(lambda.size() - 1));
     const_cast<Eigen::MatrixBase<Derived2> &>(lambda)[0]
     = 1 - lambda.tail(lambda.size() - 1).sum();
   }

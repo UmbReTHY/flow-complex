@@ -56,15 +56,17 @@ public:
       for (auto it = _ah.begin(); it != _ah.end(); ++it)
         std::cout << *it << ", ";
       std::cout << std::endl;
+      std::cout << "dist to N(x) = " << (_location - pc[*_ah.begin()]).norm() << std::endl;
     
       update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
       auto nn = std::make_pair(nnvec.begin(), number_type(0));
       try {
+        std::cout << "NORM OF RAY " << ray.squaredNorm() << std::endl;
         nn = nearest_neighbor_along_ray(_location, ray, pc[*_ah.begin()],
                                         vf, nnvec.begin(), nnvec.begin() +
                                         (pc.dim() + 1 - _ah.size()));
                                         
-        std::cout << "t = " << nn.second << std::endl;
+//        std::cout << "t = " << nn.second << std::endl;
                                         
       } catch(std::exception & e) {
         std::fprintf(stderr, "error: %s\n", e.what());
@@ -72,10 +74,11 @@ public:
       }
       if (nn.first == nnvec.begin() or nn.second > 1.0) {
         std::cout << "DESCEND SUCCESSFUL\n";
-        _location += nn.second * ray;
+        _location = driver;  // TODO this assignment can be deferred until after the next if
         // drop neg coeffs
         if (not drop_neg_coeffs(_location, lambda.head(_ah.size()), _ah)) {
           std::cout << "WITHIN CONVEX HULL\n";
+          std::cout << "LOC = " << _location.transpose() << std::endl;
           auto const insert_pair = 
           cph(cp_type(_ah.begin(), _ah.end(),
                       (_location - _ah.pc()[*_ah.begin()]).squaredNorm(),
@@ -103,6 +106,8 @@ public:
         }
       } else {
         std::cout << "DESCEND GOT STOPPED\n";
+        assert(nn.second < 1.0);
+        _location += nn.second * ray;
         size_type const size_before = _ah.size();
         std::cout << "_ah.size() = " << _ah.size() << std::endl;
         for (auto it = nnvec.begin(); it != nn.first; ++it) {

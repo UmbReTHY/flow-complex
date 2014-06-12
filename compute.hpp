@@ -39,7 +39,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     std::vector<size_type> indices(pc.size());
     std::iota(indices.begin(), indices.end(), 0);
     for (auto it = indices.cbegin(); it != indices.cend(); ++it)
-      cp_type(it, it + 1, 0);
+      fc.insert(cp_type(it, it + 1, 0));
   }
   std::stack<at_type> qa;
   std::stack<dt_type> qd;
@@ -50,15 +50,16 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   // 3) seed initial ascend task(s)
   qa.emplace(pc);
   // 4) process all tasks - qa first = breadth first search
-  while (not qa.empty()) {
-    at_type & at = qa.top();
-    at.execute(dth, cph);
-    qa.pop();
-  }
-  while (not qd.empty()) {
-    dt_type & dt = qd.top();
-    dt.execute(dth, ath, cph);
-    qd.pop();
+  while (not qa.empty() or not qd.empty()) {
+    if (not qa.empty()) {
+      at_type & at = qa.top();  // TODO code duplication: write "process task" function
+      at.execute(dth, cph);
+      qa.pop();
+    } else {
+      dt_type & dt = qd.top();
+      dt.execute(dth, ath, cph);
+      qd.pop();
+    }
   }
   
   return fc;

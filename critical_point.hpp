@@ -38,6 +38,7 @@ public:
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist, self_type * succ)
     : critical_point(idx_begin, idx_end, std::move(sq_dist)) {  // TODO make delegated-to ctor the most general one
+    std::cout << "sq_dist = " << sq_dist << std::endl;
     assert(succ);
     _successors.push_back(succ);
   }
@@ -57,6 +58,7 @@ public:
   }
   
   ~critical_point() {
+    std::cout << "DELETED: " << this << std::endl;
   }
   
   critical_point(critical_point const&) = delete;

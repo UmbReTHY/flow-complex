@@ -44,7 +44,7 @@ public:
     // add the nearest neighbor
     _ah.add_point(std::get<0>(nn));
     // set the ray
-    _ray = pc[*_ah.begin()] - _location;
+    _ray = _location - pc[*_ah.begin()];
   }
   
   // TODO reconsider these r-value references with respect to this constructor's usage in dt
@@ -65,8 +65,17 @@ public:
     eigen_vector lambda(pc.dim() + 1);
     auto vf = make_vertex_filter(_ah);
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
+    static int id = 0;
+    std::cout << "ASCEND-TASK-ID: " << ++id << std::endl;
     do {
       try {
+        std::cout << "HULL MEMBERS: ";
+        for (auto it = _ah.begin(); it != _ah.end(); ++it)
+          std::cout << *it << ", ";
+        std::cout << std::endl;
+        std::cout << "LOCATION = " << _location.transpose() << std::endl;
+        std::cout << "DRIVER = " << driver.transpose() << std::endl;
+        std::cout << "RAY = " << _ray.transpose() << std::endl;
         nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
                                         vf, nnvec.begin(), nnvec.begin() +
                                         (pc.dim() + 1 - _ah.size()));
@@ -76,8 +85,9 @@ public:
       }
       using dt = descend_task<point_cloud_type>;
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
+        std::cout << "NO STOPPER FOUND\n";
         assert(_ah.size() == pc.dim());
-        dth(dt(std::move(_ah), std::move(_location),
+        dth(dt(std::move(_ah), std::move(_location),  // TODO flowing back directly when the location is still an idx 1 cp will result in ray neary 0 -> lots of probs
                cph(cp_type(pc.dim())  // passes a cp at inf to cph
                                       // no insert will happen since there's
                                       // only 1 cp at inf which is already
@@ -87,27 +97,34 @@ public:
            );
         break;  // EXIT 1
       } else {
+        std::cout << "STOPPER FOUND\n";
         _location += nn.second * _ray;
         for (auto it = nnvec.begin(); it != nn.first; ++it) {
           _ah.add_point(*it);
         }
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
+          std::cout << "FINITE MAX SUSPECT\n";
           if (not drop_neg_coeffs(_location, lambda, _ah)) {  // no points dropped
+            std::cout << "FINITE MAX INDEED\n";
+            std::cout << "MAX-LOC " << _location.transpose() << std::endl;
             number_type sq_dist((_location - pc[*_ah.begin()]).squaredNorm());
             auto r_pair = cph(cp_type(_ah.begin(), _ah.end(),
                                       std::move(sq_dist)));
             if (r_pair.first) {  // only spawn descends for new maxima
               auto max_ptr = r_pair.second;
+              std::cout << "SHOULD BE: " << max_ptr << std::endl;
               spawn_sub_descends(dth, _location, _ah.size(), max_ptr, _ah);
               dth(dt(std::move(_ah), std::move(_location), max_ptr));
             }
             break;    // EXIT 2 - none have been dropped -> finite max
           } else {
+            std::cout << "HAD TO DROP SOME\n";
             update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
                                              driver, _ray);
           }
         } else {
+          std::cout << "NOT MAX YET - NEED TO CLIMB\n";
           update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
                                            driver, _ray);
         }
@@ -130,9 +147,14 @@ private:
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
     std::random_device rd;
-    std::mt19937 gen(rd());
+    // TODO remove:
+    int seed = 679828724;
+//    std::cout << "seed = " << seed << std::endl;
+//    std::mt19937 gen(rd());
+    std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
     std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
+    std::uniform_real_distribution<Float> rand_real;
     std::vector<size_type> sampled_indices;
     sampled_indices.reserve(pc.dim() + 1);
     auto already_sampled = [&sampled_indices] (size_type idx) {
@@ -140,7 +162,8 @@ private:
                                                 sampled_indices.end(), idx);
     };
     target.setZero();
-    Float const fraction = 1.0 / (pc.dim() + 1);
+//    Float const fraction = 1.0 / (pc.dim() + 1);
+    Float sum(0.0);
     for (size_type i = 0; i < pc.dim() + size_type(1); ++i) {
       size_type idx;
       do {
@@ -148,9 +171,12 @@ private:
         assert(0 <= idx);
         assert(idx < pc.size());
       } while(already_sampled(idx));
+      Float tmp = rand_real(gen);
+      sum += tmp;
       sampled_indices.push_back(idx);
-      target += fraction * pc[idx];
+      target += tmp * pc[idx];
     }
+    target /= sum;
   }
 
   affine_hull<point_cloud_type> _ah;

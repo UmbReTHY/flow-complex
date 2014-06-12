@@ -46,12 +46,13 @@ bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
   auto m_it = ah.end();
   for (size_type i = static_cast<size_type>(lambda.size()); i-- > 0;) {
     --m_it;
-    if (lambda[i] < 0) {
-      std::cout << "NEG COEFF" << lambda[i] << std::endl;
+    if (lambda[i] < 0) {  // TODO put stability threshold here
+      std::cout << "NEG COEFF" << lambda[i] << " for index = " << *(ah.begin() + i) << std::endl;
       assert(ah.begin() <= m_it);
       assert(m_it < ah.end());
       ah.drop_point(m_it);
     }
+    std::cout << "POS COEFF" << lambda[i] << " for index = " << *(ah.begin() + i) << std::endl;
   }
   return static_cast<size_type>(lambda.size()) != ah.size();
 }
