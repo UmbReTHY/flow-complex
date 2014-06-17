@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstdint>
 
 #include <algorithm>
 #include <utility>
@@ -34,6 +35,7 @@ private:
 public:
   ascend_task(point_cloud_type const& pc)
     : _ah(pc), _location(pc.dim()), _ray(pc.dim()) {
+    std::cout << "***AT-CTOR: " << this << std::endl;
     // generate seed
     std::tuple<size_type, number_type, bool> nn;
     // reseed as long as the nearest neighbor is not unique
@@ -52,22 +54,42 @@ public:
               Eigen::Matrix<number_type, Eigen::Dynamic, 1> location,
               Eigen::Matrix<number_type, Eigen::Dynamic, 1> ray)
   : _ah(std::move(ah)) {
+    std::cout << "***AT-CTOR: " << this << std::endl;
     assert(_ah.size() == _ah.pc().dim());  // should be at a (d-1) cp
     _location.swap(location);
     _ray.swap(ray);
   }
   
+  ascend_task (ascend_task && tmp)
+    : _ah(std::move(tmp._ah)), _location(), _ray() {
+    std::cout << "***AT-MOVE-CTOR: " << this << std::endl;
+    _location.swap(tmp._location);
+    _ray.swap(tmp._ray);
+  }
+  
+  ~ascend_task() {
+    std::cout << "***AT-DESTRUCT: " << this << std::endl;
+  }
+  
+  ascend_task (ascend_task const&) = delete;
+  ascend_task & operator=(ascend_task const&) = delete;
+  ascend_task & operator=(ascend_task &&) = delete;
+  
   template <typename DTHandler, typename CPHandler>
   void execute(DTHandler & dth, CPHandler & cph) {
     auto const& pc = _ah.pc();
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
+    std::vector<size_type> dropvec(pc.dim());  // stores recently dropped pts
+    auto dropped_end = dropvec.begin();
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
     auto vf = make_vertex_filter(_ah);
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     static int id = 0;
     std::cout << "ASCEND-TASK-ID: " << ++id << std::endl;
+    std::uint32_t hop_count = 0;
     do {
+      ++hop_count;
       try {
         std::cout << "HULL MEMBERS: ";
         for (auto it = _ah.begin(); it != _ah.end(); ++it)
@@ -87,14 +109,21 @@ public:
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         std::cout << "NO STOPPER FOUND\n";
         assert(_ah.size() == pc.dim());
-        dth(dt(std::move(_ah), std::move(_location),  // TODO flowing back directly when the location is still an idx 1 cp will result in ray neary 0 -> lots of probs
-               cph(cp_type(pc.dim())  // passes a cp at inf to cph
-                                      // no insert will happen since there's
-                                      // only 1 cp at inf which is already
-                                      // part of the fc
-                  ).second)  // and returns its address to be used as the
-                             // successor of possibly found cps by this dt
-           );
+        if (hop_count > 1) {  // no dt back to idx-(d-1) cp
+          std::cout << "SPAWNED ASCEND BACK\n";
+          size_type size_before = _ah.size();
+          auto * inf_ptr = cph(cp_type(pc.dim())).second;  // addr of cp at inf
+          for (auto it = dropvec.begin(); it != dropped_end; ++it)
+            _ah.add_point(*it);
+          spawn_sub_descends(dth, _location, size_before, inf_ptr, _ah);
+          
+          std::cout << "SPAWNING(at) DT with MEMBERS: ";   
+          for (auto it = _ah.begin(); it != _ah.end(); ++it)
+            std::cout << *it << ", ";
+          std::cout << std::endl;
+          
+          dth(dt(std::move(_ah), std::move(_location), inf_ptr));          
+        }
         break;  // EXIT 1
       } else {
         std::cout << "STOPPER FOUND\n";
@@ -105,7 +134,9 @@ public:
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
           std::cout << "FINITE MAX SUSPECT\n";
-          if (not drop_neg_coeffs(_location, lambda, _ah)) {  // no points dropped
+          dropped_end = drop_neg_coeffs(_location, lambda, _ah,
+                                        dropvec.begin());
+          if (dropvec.begin() == dropped_end) {  // no points dropped
             std::cout << "FINITE MAX INDEED\n";
             std::cout << "MAX-LOC " << _location.transpose() << std::endl;
             number_type sq_dist((_location - pc[*_ah.begin()]).squaredNorm());
@@ -113,8 +144,13 @@ public:
                                       std::move(sq_dist)));
             if (r_pair.first) {  // only spawn descends for new maxima
               auto max_ptr = r_pair.second;
-              std::cout << "SHOULD BE: " << max_ptr << std::endl;
               spawn_sub_descends(dth, _location, _ah.size(), max_ptr, _ah);
+              
+              std::cout << "SPAWNING DT with MEMBERS: ";   
+              for (auto it = _ah.begin(); it != _ah.end(); ++it)
+                std::cout << *it << ", ";
+              std::cout << std::endl;
+              
               dth(dt(std::move(_ah), std::move(_location), max_ptr));
             }
             break;    // EXIT 2 - none have been dropped -> finite max
@@ -132,6 +168,7 @@ public:
       vf.reset();  // make the vertex filter consider all points
                    // of the point cloud again on subsequent calls
     } while(true);
+    std::cout << "***AT-COMPLETE***\n";
   }
   
 private:

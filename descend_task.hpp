@@ -32,8 +32,28 @@ public:
                eigen_vector && location,
                critical_point<number_type, size_type> * succ)
     : _ah(std::move(ah)), _succ(succ) {
+    std::cout << "****DT-CONSTRUCTOR-BEGIN*****\n";
+    std::cout << "address = " << this << std::endl;
+    std::cout << "HULL MEMBERS: ";
+    for (auto it = _ah.begin(); it != _ah.end(); ++it)
+      std::cout << *it << ", ";
+    std::cout << std::endl;
+    std::cout << "****DT-CONSTRUCTOR-END*****\n";
     _location.swap(location);
   }
+  
+  descend_task(descend_task && tmp)
+    : _ah(std::move(tmp._ah)), _location(), _succ(tmp._succ) {
+    _location.swap(tmp._location);
+    std::cout << "DT-MOVE-CONSTR: address = " << this << std::endl;
+  }
+  
+  ~descend_task() {
+    std::cout << "DELETE-DT: " << this << std::endl;
+  }
+  
+  descend_task(descend_task const&) = delete;
+  descend_task & operator=(descend_task const&) = delete;
   
   template <typename DTHandler, typename ATHandler, typename CPHandler>
   void execute(DTHandler & dth, ATHandler & ath, CPHandler & cph) {
@@ -43,12 +63,15 @@ public:
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
+    std::vector<size_type> dropvec(pc.dim());
+    auto dropped_end = dropvec.begin();
     using idx_iterator = typename affine_hull<point_cloud_type>::iterator;
     auto vf = make_vertex_filter(_ah);
     
     static int dt_id = 0;
     dt_id++;
     std::cout << "DESCEND_TASK_ID = " << dt_id << std::endl;
+    std::cout << "address = " << this << std::endl;
     
     do {
       std::cout << "_ah.size() = " << _ah.size() << std::endl;
@@ -56,9 +79,11 @@ public:
       for (auto it = _ah.begin(); it != _ah.end(); ++it)
         std::cout << *it << ", ";
       std::cout << std::endl;
-      std::cout << "dist to N(x) = " << (_location - pc[*_ah.begin()]).norm() << std::endl;
+      std::cout << "LOCATION: " << _location.transpose() << std::endl;
     
       update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
+      std::cout << "RAY: " << ray.transpose() << std::endl;
+      
       auto nn = std::make_pair(nnvec.begin(), number_type(0));
       try {
         std::cout << "NORM OF RAY " << ray.squaredNorm() << std::endl;
@@ -76,7 +101,9 @@ public:
         std::cout << "DESCEND SUCCESSFUL\n";
         _location = driver;  // TODO this assignment can be deferred until after the next if
         // drop neg coeffs
-        if (not drop_neg_coeffs(_location, lambda.head(_ah.size()), _ah)) {
+        dropped_end = drop_neg_coeffs(_location, lambda.head(_ah.size()), _ah,
+                                      dropvec.begin());
+        if (dropped_end == dropvec.begin()) {
           std::cout << "WITHIN CONVEX HULL\n";
           std::cout << "LOC = " << _location.transpose() << std::endl;
           auto const insert_pair = 
@@ -93,6 +120,12 @@ public:
                                  insert_pair.second, _ah);
               _succ = insert_pair.second;  // for all subsequent discoveries
                                            // we have a new direct succ
+
+              std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
+              for (auto it = _ah.begin(); it != _ah.end(); ++it)
+                std::cout << *it << ", ";
+              std::cout << std::endl;
+
             } else {
               break;  // EXIT 1
             }
@@ -105,9 +138,9 @@ public:
           std::cout << "WITHIN AFFINE HULL\n";
         }
       } else {
-        std::cout << "DESCEND GOT STOPPED\n";
+        std::cout << "DESCEND GOT STOPPED\n";  // TODO: CONTINUE TRACKING HERE
         assert(nn.second < 1.0);
-        _location += nn.second * ray;
+        _location += nn.second * ray;  // TODO: since norm(ray) == dist-to-driver, we can remove the multiplication here
         size_type const size_before = _ah.size();
         std::cout << "_ah.size() = " << _ah.size() << std::endl;
         for (auto it = nnvec.begin(); it != nn.first; ++it) {
@@ -123,6 +156,11 @@ public:
       vf.reset();  // make the vertex filter consider all points
                    // of the point cloud again on subsequent calls
       std::cout << "ONE MORE TURN\n";
+      std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
+      for (auto it = _ah.begin(); it != _ah.end(); ++it)
+        std::cout << *it << ", ";
+      std::cout << std::endl;
+      
     } while(true);
   }
   

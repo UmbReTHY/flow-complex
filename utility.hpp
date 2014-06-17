@@ -36,14 +36,16 @@ const eigen_align<false>::value = Eigen::Unaligned;
   @param coeff_begin OutputIterator to store at least ah.pc().dim() coefficients
   @return true, if points were dropped, false otherwise
 */
-template <typename PointCloud, typename Derived1, typename Derived2>
-bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
-                     Eigen::MatrixBase<Derived2> const& lambda,
-                     affine_hull<PointCloud> & ah) {
+template <typename PointCloud, typename Derived1, typename Derived2,
+          typename Iterator>
+Iterator drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
+                         Eigen::MatrixBase<Derived2> const& lambda,
+                         affine_hull<PointCloud> & ah, Iterator dropped_begin) {
   using size_type = typename affine_hull<PointCloud>::size_type;
   assert(static_cast<size_type>(lambda.size()) == ah.size());
   ah.project(x, const_cast<Eigen::MatrixBase<Derived2> &>(lambda));
   auto m_it = ah.end();
+  auto dropped_end = dropped_begin;
   for (size_type i = static_cast<size_type>(lambda.size()); i-- > 0;) {
     --m_it;
     if (lambda[i] < 0) {  // TODO put stability threshold here
@@ -51,10 +53,12 @@ bool drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
       assert(ah.begin() <= m_it);
       assert(m_it < ah.end());
       ah.drop_point(m_it);
+      *(dropped_end++) = *(ah.begin() + i);
+    } else {
+      std::cout << "POS COEFF" << lambda[i] << " for index = " << *(ah.begin() + i) << std::endl;
     }
-    std::cout << "POS COEFF" << lambda[i] << " for index = " << *(ah.begin() + i) << std::endl;
   }
-  return static_cast<size_type>(lambda.size()) != ah.size();
+  return dropped_end;
 }
 
 /**
@@ -74,7 +78,7 @@ void spawn_sub_descends(DTHandler const& dth,
                         affine_hull<PointCloud> & ah) {
   // the dt corresponding to offset = 0 is continued by *this
   for (size_type offset = 1; offset < num_dropped; ++offset) {
-    auto new_ah(ah);
+    auto new_ah(ah);    
     new_ah.drop_point(new_ah.begin() + offset);
     using dt = descend_task<PointCloud>;
     using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;

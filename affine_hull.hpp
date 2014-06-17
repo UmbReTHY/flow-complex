@@ -32,7 +32,26 @@ public:
   
   affine_hull(point_cloud_type const& pc)
     : _dyn_qr(pc.dim()), _members(), _pc(pc) {
+    std::cout << "**AH-CTOR " << this << std::endl;
   }
+  
+  affine_hull(affine_hull const& orig)
+    : _dyn_qr(orig._dyn_qr), _members(orig._members), _pc(orig._pc) {
+    std::cout << "**AH-COPY-CTOR " << this << std::endl;
+  }
+  
+  affine_hull(affine_hull && tmp)
+    : _dyn_qr(std::move(tmp._dyn_qr)), _members(std::move(tmp._members)),
+      _pc(tmp._pc) {
+    std::cout << "**AH-MOVE-CTOR " << this << std::endl;
+  }
+
+  ~affine_hull() {
+    std::cout << "**AH-DESTRUCT " << this << std::endl;
+  }
+
+  affine_hull & operator=(affine_hull &&) = delete;
+  affine_hull & operator=(affine_hull const&) = delete;
   
   template <typename Index>
   void add_point(Index const idx) {
@@ -105,30 +124,8 @@ private:
     return (_members.begin() <= it) and (it < _members.end());
   }
 
-  bool is_member(size_type const idx) const {  // TODO depcrecate/remove
+  bool is_member(size_type const idx) const {  // TODO deprecate/remove
     return is_member(std::find(_members.begin(), _members.end(), idx));
-  }
-  
-  template <typename Index>
-  void drop_point(Index const idx) {  // TODO depcrecate/remove
-    assert(is_member(idx));
-    auto const it = std::find(_members.begin(), _members.end(), idx);
-    if (_members.size() > 1) {
-      bool const del_orig = _members.begin() == it;
-      _dyn_qr.delete_column(del_orig ? 0 : // gets deleted because the point
-                                           // corresponding to this column
-                                           // will become the new origin
-                            std::distance(_members.begin(), it) - 1);
-      // if there's at least one column left after deleting a member
-      // we need to perform a rank-one update on it
-      if (del_orig && _members.size() > 2) {
-        _dyn_qr.rank_one_update(_pc[_members.front()] - _pc[_members[1]],
-                                eigen_vector::Ones(_dyn_qr.num_cols()));
-      }
-    }
-    _members.erase(it);
-    assert((_members.empty() && _dyn_qr.num_cols() == 0) ||
-           _members.size() == _dyn_qr.num_cols() + 1);
   }
 
   dynamic_qr<number_type> _dyn_qr;

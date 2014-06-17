@@ -55,7 +55,6 @@ void print(FC::critical_point<number_type, size_type> const& cp) {
   using std::cout;
   cout << "index of cp = " << cp.index() << '\n';
   if (!cp.is_max_at_inf()) {
-    std::cout << "address = " << &cp << std::endl;
     cout << "\tpoint-indices: ";
     for (auto it = cp.idx_begin(); it != cp.idx_end(); ++it)
       cout << *it << ", ";
@@ -64,7 +63,6 @@ void print(FC::critical_point<number_type, size_type> const& cp) {
          << std::distance(cp.succ_begin(), cp.succ_end()) << '\n';
     cout << "\ttheir squared distances: ";
     for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it) {
-      std::cout << "address = " << *it << " : ";
       cout << (*it)->sq_dist() << ", ";
     }
     cout << '\n';

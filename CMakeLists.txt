@@ -4,12 +4,11 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 include(cotire)
 
-set(BASE_FLAGS "-std=c++11")
+set(BASE_FLAGS "-std=c++11 -fcolor-diagnostics")
 set(DIAG_FLAGS "-Wall -Wextra -g")
 set(REL_FLAGS  "-O2 -DNDEBUG -pipe -fomit-frame-pointer")
 set (CMAKE_CXX_FLAGS ${BASE_FLAGS})
 set (CMAKE_CXX_FLAGS_DEBUG "${DIAG_FLAGS} -O0")
-message(${CMAKE_CXX_FLAGS_DEBUG})
 set (CMAKE_CXX_FLAGS_RELEASE ${REL_FLAGS})
 set (CMAKE_CXX_FLAGS_RELWITHDEBINFO ${REL_FLAGS} ${DIAG_FLAGS})
 

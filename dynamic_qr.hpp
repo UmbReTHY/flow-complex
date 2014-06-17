@@ -12,6 +12,12 @@
 namespace FC {
 
 template <typename _number_type>
+class dynamic_qr;
+
+template <typename number_type>
+std::ostream & operator<<(std::ostream &, dynamic_qr<number_type> const&);
+
+template <typename _number_type>
 class dynamic_qr {
   using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
   using eigen_map = Eigen::Map<eigen_vector>;
@@ -29,8 +35,11 @@ class dynamic_qr {
       : _q(eigen_matrix::Identity(num_rows, num_rows)),
         _r_raw(new number_type[num_rows * num_rows]),
         _r_begin(new number_type * [num_rows]), _r_end(_r_begin) {
+      std::cout << "**QR-CTOR " << this << std::endl;
       assert(num_rows > 0);
-      init_row_ptr();
+      std::vector<size_type> offsets(num_rows);
+      std::iota(offsets.begin(), offsets.end(), 0);
+      init_row_ptr(offsets.begin());
     }
     
     // copy-constructor
@@ -39,36 +48,52 @@ class dynamic_qr {
       : _q(orig._q), _r_raw(nullptr),
         _r_begin(new number_type * [orig.num_rows()]),
         _r_end(_r_begin + orig.num_cols()) {
+      std::cout << "**QR-COPY-CTOR " << this << std::endl;
       size_type const num_elements = orig.num_rows() * orig.num_rows();
       _r_raw = new number_type[num_elements];
-      init_row_ptr();
+
+      // since some column pointers might have been swapped,
+      // we need to copy the exact same offsets
+      std::vector<size_type> offsets(num_rows());
+      for (size_type i = 0; i < offsets.size(); ++i)
+        offsets[i] = (orig._r_begin[i] - orig._r_raw) / orig.num_rows();
+      init_row_ptr(offsets.begin());
+      
       std::copy(orig._r_raw, orig._r_raw + num_elements, _r_raw);
+      
+      assert(num_rows() == orig.num_rows());
+      assert(num_cols() == orig.num_cols());
+      assert(_q == orig._q);
+      assert(std::equal(_r_raw, _r_raw + num_elements, orig._r_raw));
     }
 
-    dynamic_qr & operator=(dynamic_qr const&) = delete;
-    
     // move-constructor
     dynamic_qr(dynamic_qr && tmp)
       : _q(), _r_raw(tmp._r_raw), _r_begin(tmp._r_begin), _r_end(tmp._r_end) {
+      std::cout << "**QR-MOVE-CTOR " << this << std::endl;
       _q.swap(tmp._q);
       // ownership has been transferred
       tmp._r_raw = nullptr;
       tmp._r_begin = nullptr;
     }
+
+    dynamic_qr & operator=(dynamic_qr const&) = delete;
+    dynamic_qr & operator=(dynamic_qr &&) = delete;
     
     // move assignment-operator
-    dynamic_qr & operator=(dynamic_qr && tmp) {
-      if (&tmp != this) {
-        _q.swap(tmp._q);
-        _r_raw = tmp._r_raw;
-        _r_begin = tmp._r_begin;
-        _r_end = tmp._r_end;
-        // ownership has been transferred
-        tmp._r_raw = nullptr;
-        tmp._r_begin = nullptr;
-      }
-      return *this;
-    }
+//    dynamic_qr & operator=(dynamic_qr && tmp) {
+//      std::cout << "**QR: move-assign\n";
+//      if (&tmp != this) {
+//        _q.swap(tmp._q);
+//        _r_raw = tmp._r_raw;
+//        _r_begin = tmp._r_begin;
+//        _r_end = tmp._r_end;
+//        // ownership has been transferred
+//        tmp._r_raw = nullptr;
+//        tmp._r_begin = nullptr;
+//      }
+//      return *this;
+//    }
     
     size_type num_rows() const noexcept {
       assert(_q.rows() >= 0);
@@ -170,6 +195,7 @@ class dynamic_qr {
     }
     
     ~dynamic_qr() {
+      std::cout << "**QR-DESTRUCT " << this << std::endl;
       if (_r_begin) {
         delete[] _r_begin;
         _r_begin = nullptr;
@@ -183,14 +209,16 @@ class dynamic_qr {
   private:
     /**
       @brief helper function to avoid code duplication in constructors
+      @param begin iterator to the offsets of the columns into the raw pointer
     */
-    void init_row_ptr() {
+    template <class Iterator>
+    void init_row_ptr(Iterator begin) {
       size_type const max_cols = _q.cols();
       auto const& num_rows = max_cols;
       assert(nullptr != _r_raw);  // to make sure constructors initialized
                                   // the storage
       for (size_type i = 0; i < max_cols; ++i)
-        _r_begin[i] = _r_raw + i * num_rows;
+        _r_begin[i] = _r_raw + *(begin++) * num_rows;
     }
   
     void givens(number_type const& a, number_type const& b,
@@ -263,11 +291,32 @@ class dynamic_qr {
       }
     }
 
+    template <typename _nr_type>
+    friend std::ostream & operator<<(std::ostream &, dynamic_qr<_nr_type> const&);
+
     eigen_matrix   _q;
     number_type *  _r_raw;
     number_type ** _r_begin;
     number_type ** _r_end;
 };
+
+template <typename number_type>
+std::ostream & operator<<(std::ostream & ostr,
+                          dynamic_qr<number_type> const& dqr) {
+  using size_type = typename dynamic_qr<number_type>::size_type;
+  ostr << "Q = \n" << dqr._q << '\n';
+  ostr << "R = \n";
+  for (size_type i = 0; i < dqr.num_rows(); ++i) {
+    for (size_type j = 0; j < dqr.num_cols(); ++j) {
+      if (i > j)
+        ostr << 0 << '\t';
+      else
+        ostr << dqr._r_begin[j][i] << '\t';
+    }
+    ostr << '\n';
+  }
+  return ostr;
+}
 
 }  // namespace FC
 

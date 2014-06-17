@@ -46,19 +46,19 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
-  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};
+  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};  // TODO to safe one CTOR call: emplace insert
   // 3) seed initial ascend task(s)
   qa.emplace(pc);
   // 4) process all tasks - qa first = breadth first search
   while (not qa.empty() or not qd.empty()) {
     if (not qa.empty()) {
-      at_type & at = qa.top();  // TODO code duplication: write "process task" function
-      at.execute(dth, cph);
+      at_type at(std::move(qa.top()));  // TODO code duplication: write "process task" function
       qa.pop();
+      at.execute(dth, cph);
     } else {
-      dt_type & dt = qd.top();
+      dt_type dt(std::move(qd.top()));
+      qd.pop();  // TODO: these two steps above have to be atomic
       dt.execute(dth, ath, cph);
-      qd.pop();
     }
   }
   
