@@ -66,7 +66,7 @@ public:
     std::vector<size_type> dropvec(pc.dim());
     auto dropped_end = dropvec.begin();
     using idx_iterator = typename affine_hull<point_cloud_type>::iterator;
-    auto vf = make_vertex_filter(_ah);
+    auto vf = make_vertex_filter(_ah, dropvec.begin(), dropped_end);
     
     static int dt_id = 0;
     dt_id++;
@@ -102,7 +102,8 @@ public:
         _location = driver;  // TODO this assignment can be deferred until after the next if
         // drop neg coeffs
         dropped_end = drop_neg_coeffs(_location, lambda.head(_ah.size()), _ah,
-                                      dropvec.begin());
+                                      dropvec.begin());  // TODO we know the negative coeffs already
+                                                         //      from the computation of the driver
         if (dropped_end == dropvec.begin()) {
           std::cout << "WITHIN CONVEX HULL\n";
           std::cout << "LOC = " << _location.transpose() << std::endl;
@@ -113,7 +114,7 @@ public:
           if (insert_pair.first) {
             if (insert_pair.second->index() == (pc.dim() - 1)) {
               using at = ascend_task<point_cloud_type>;
-              ath(at(_ah, _location, ray));
+              ath(at(_ah, _location, ray));  // TODO for dim() == 2, we can move the arguments
             }
             if (insert_pair.second->index() > 2) {
               spawn_sub_descends(dth, _location, _ah.size(),
@@ -124,8 +125,8 @@ public:
               std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
               for (auto it = _ah.begin(); it != _ah.end(); ++it)
                 std::cout << *it << ", ";
-              std::cout << std::endl;
-
+              std::cout << std::endl;  // TODO we could remember the dropped
+                                       //      vertex if spwan_sub_descends would not alter _ah
             } else {
               break;  // EXIT 1
             }
@@ -153,14 +154,13 @@ public:
         spawn_sub_descends(dth, _location, size_before, _succ, _ah);
         std::cout << "after sub-spawn: _ah.size() = " << _ah.size() << std::endl;
       }
-      vf.reset();  // make the vertex filter consider all points
-                   // of the point cloud again on subsequent calls
+      vf.reset(dropped_end);  // make the vertex filter consider all points
+                              // of the point cloud again on subsequent calls
       std::cout << "ONE MORE TURN\n";
       std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
       for (auto it = _ah.begin(); it != _ah.end(); ++it)
         std::cout << *it << ", ";
       std::cout << std::endl;
-      
     } while(true);
   }
   

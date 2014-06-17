@@ -20,15 +20,15 @@ namespace FC {
                     the given range, an exception is thrown.
 */
 template <typename Derived1, typename Derived2, typename Derived3,
-          typename PointCloud, typename NNIterator>
+          typename PointCloud, typename NNIterator, class DropIterator>
 std::pair<NNIterator, typename Derived1::Scalar>
 nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
                            Eigen::MatrixBase<Derived2> const& v,
                            Eigen::MatrixBase<Derived3> const& p,
-                           vertex_filter<PointCloud> & get_next,
+                           vertex_filter<PointCloud, DropIterator> & get_next,
                            NNIterator begin, NNIterator end) {
   using number_type = typename Derived1::Scalar;
-  using vf_type = vertex_filter<PointCloud>;
+  using vf_type = vertex_filter<PointCloud, DropIterator>;
   // compute some values that don't depend on the candidate points
   number_type const x_p = x.dot(p);
   number_type const p_p = p.dot(p);

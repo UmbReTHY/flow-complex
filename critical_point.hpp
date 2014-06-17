@@ -25,7 +25,7 @@ public:
   typedef typename idx_container::const_iterator   idx_iterator;
   typedef typename succ_container::const_iterator succ_iterator;
 
-  // constructor for finite maxima & idx 1 critical points
+  // constructor for finite maxima
   template <typename IdxIterator>
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist)

@@ -26,16 +26,16 @@ int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
   
-//  size_type const NUM_PTS = 1000;
-//  size_type const DIM     =    3;
-  size_type const NUM_PTS = 4;
-  size_type const DIM     =    2;
+  size_type const NUM_PTS = 1000;
+  size_type const DIM     =    3;
+//  size_type const NUM_PTS = 4;
+//  size_type const DIM     =    2;
 
   // create a point cloud - uniform 1000 pt sampling of DIM-d space
   using eigen_matrix = Eigen::Matrix<number_type, Eigen::Dynamic, Eigen::Dynamic>;
   eigen_matrix data = eigen_matrix::Random(DIM, NUM_PTS);
-  data << 1.0, 0.5, 1.0, 6.0,
-          0.25, 1.5, 2.75, 1.5;
+//  data << 1.0, 0.5, 1.0, 6.0,
+//          0.25, 1.5, 2.75, 1.5;
   std::array<number_type const*, NUM_PTS> points;
   for (size_type i = 0; i < NUM_PTS; ++i)
     points[i] = data.col(i).data();
@@ -50,7 +50,7 @@ int main(int, char**) {
     print(cp);
 }
 
-template <typename number_type, typename size_type>
+template <typename number_type, typename size_type>  // TODO summary (alternating sum)
 void print(FC::critical_point<number_type, size_type> const& cp) {
   using std::cout;
   cout << "index of cp = " << cp.index() << '\n';

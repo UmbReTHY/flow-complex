@@ -83,7 +83,7 @@ public:
     auto dropped_end = dropvec.begin();
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
-    auto vf = make_vertex_filter(_ah);
+    auto vf = make_vertex_filter(_ah, dropvec.begin(), dropped_end);
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     static int id = 0;
     std::cout << "ASCEND-TASK-ID: " << ++id << std::endl;
@@ -165,8 +165,8 @@ public:
                                            driver, _ray);
         }
       }
-      vf.reset();  // make the vertex filter consider all points
-                   // of the point cloud again on subsequent calls
+      vf.reset(dropped_end);  // make the vertex filter consider all points
+                              // of the point cloud again on subsequent calls
     } while(true);
     std::cout << "***AT-COMPLETE***\n";
   }
@@ -184,11 +184,7 @@ private:
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
     std::random_device rd;
-    // TODO remove:
-    int seed = 679828724;
-//    std::cout << "seed = " << seed << std::endl;
-//    std::mt19937 gen(rd());
-    std::mt19937 gen(seed);
+    std::mt19937 gen(rd());
     // generates numbers in [0, pc.size() - 1]
     std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
     std::uniform_real_distribution<Float> rand_real;
@@ -199,7 +195,6 @@ private:
                                                 sampled_indices.end(), idx);
     };
     target.setZero();
-//    Float const fraction = 1.0 / (pc.dim() + 1);
     Float sum(0.0);
     for (size_type i = 0; i < pc.dim() + size_type(1); ++i) {
       size_type idx;
