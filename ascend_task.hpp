@@ -53,7 +53,7 @@ public:
   ascend_task(affine_hull<point_cloud_type> ah,  // TODO remove copies here
               Eigen::Matrix<number_type, Eigen::Dynamic, 1> location,
               Eigen::Matrix<number_type, Eigen::Dynamic, 1> ray)
-  : _ah(std::move(ah)) {
+  : _ah(std::move(ah)), _location(), _ray() {
     std::cout << "***AT-CTOR: " << this << std::endl;
     assert(_ah.size() == _ah.pc().dim());  // should be at a (d-1) cp
     _location.swap(location);
@@ -105,32 +105,24 @@ public:
         std::cerr << "error: " << e.what() << std::endl;
         std::exit(EXIT_FAILURE);
       }
-      using dt = descend_task<point_cloud_type>;
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         std::cout << "NO STOPPER FOUND\n";
-        assert(_ah.size() == pc.dim());
+//        assert(_ah.size() == pc.dim());  // TODO this might not be justified
         if (hop_count > 1) {  // no dt back to idx-(d-1) cp
-          std::cout << "SPAWNED ASCEND BACK\n";
+          std::cout << "SPAWNED DESCEND BACK\n";
           size_type size_before = _ah.size();
           auto * inf_ptr = cph(cp_type(pc.dim())).second;  // addr of cp at inf
           for (auto it = dropvec.begin(); it != dropped_end; ++it)
             _ah.add_point(*it);
-          spawn_sub_descends(dth, _location, size_before, inf_ptr, _ah);
-          
-          std::cout << "SPAWNING(at) DT with MEMBERS: ";   
-          for (auto it = _ah.begin(); it != _ah.end(); ++it)
-            std::cout << *it << ", ";
-          std::cout << std::endl;
-          
-          dth(dt(std::move(_ah), std::move(_location), inf_ptr));          
+          spawn_sub_descends(dth, size_before, std::move(_location),
+                             std::move(_ah), inf_ptr);
         }
         break;  // EXIT 1
       } else {
         std::cout << "STOPPER FOUND\n";
         _location += nn.second * _ray;
-        for (auto it = nnvec.begin(); it != nn.first; ++it) {
+        for (auto it = nnvec.begin(); it != nn.first; ++it)
           _ah.add_point(*it);
-        }
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
           std::cout << "FINITE MAX SUSPECT\n";
@@ -144,14 +136,8 @@ public:
                                       std::move(sq_dist)));
             if (r_pair.first) {  // only spawn descends for new maxima
               auto max_ptr = r_pair.second;
-              spawn_sub_descends(dth, _location, _ah.size(), max_ptr, _ah);
-              
-              std::cout << "SPAWNING DT with MEMBERS: ";   
-              for (auto it = _ah.begin(); it != _ah.end(); ++it)
-                std::cout << *it << ", ";
-              std::cout << std::endl;
-              
-              dth(dt(std::move(_ah), std::move(_location), max_ptr));
+              spawn_sub_descends(dth, _ah.size(),
+                                 std::move(_location), std::move(_ah), max_ptr);
             }
             break;    // EXIT 2 - none have been dropped -> finite max
           } else {
@@ -163,6 +149,11 @@ public:
           std::cout << "NOT MAX YET - NEED TO CLIMB\n";
           update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
                                            driver, _ray);
+          dropped_end = dropvec.begin();  // starting from dimension 3, this is
+                                          // necessary because more than 1 point
+                                          // can be dropped at once: after one
+                                          // more round there is no recently
+                                          // dropped point anymore
         }
       }
       vf.reset(dropped_end);  // make the vertex filter consider all points
@@ -184,7 +175,10 @@ private:
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
     std::random_device rd;
-    std::mt19937 gen(rd());
+//    int seed = rd();
+    int seed = -460063112;
+    std::cout << "seed = " << seed << std::endl;
+    std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
     std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
     std::uniform_real_distribution<Float> rand_real;

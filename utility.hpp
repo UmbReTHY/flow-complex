@@ -52,8 +52,8 @@ Iterator drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
       std::cout << "NEG COEFF" << lambda[i] << " for index = " << *(ah.begin() + i) << std::endl;
       assert(ah.begin() <= m_it);
       assert(m_it < ah.end());
+      *(dropped_end++) = *(ah.begin() + i);  // before drop, or iterator inval.
       ah.drop_point(m_it);
-      *(dropped_end++) = *(ah.begin() + i);
     } else {
       std::cout << "POS COEFF" << lambda[i] << " for index = " << *(ah.begin() + i) << std::endl;
     }
@@ -62,30 +62,31 @@ Iterator drop_neg_coeffs(Eigen::MatrixBase<Derived1> const& x,
 }
 
 /**
-  TODO this is not useful for descend tasks: one id should not be dropped
   @brief schedules descend tasks for every point but one that is dropped in
          the range. One point is dropped on ah directly and is intended to be
          reused in other tasks instead.
   @param num_dropped the number of points for which to schedule a descend task
                      after being dropped, starting at ah.begin()
 */
-template <class DTHandler, class PointCloud, class Derived,
-          typename number_type, typename size_type>
-void spawn_sub_descends(DTHandler const& dth,
-                        Eigen::MatrixBase<Derived> const& x,
+template <class DTHandler, class PointCloud, typename number_type,
+          typename size_type>
+void spawn_sub_descends(DTHandler & dth,
                         size_type num_dropped,
-                        critical_point<number_type, size_type> * succ,
-                        affine_hull<PointCloud> & ah) {
-  // the dt corresponding to offset = 0 is continued by *this
+                        Eigen::Matrix<number_type, Eigen::Dynamic, 1> && x,
+                        affine_hull<PointCloud> ah,
+                        critical_point<number_type, size_type> * succ) {
+  size_type dropped_idx;
+  using dt = descend_task<PointCloud>;
   for (size_type offset = 1; offset < num_dropped; ++offset) {
-    auto new_ah(ah);    
+    auto new_ah(ah);
+    dropped_idx = *(new_ah.begin() + offset);
     new_ah.drop_point(new_ah.begin() + offset);
-    using dt = descend_task<PointCloud>;
-    using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-    dth(dt(std::move(new_ah), eigen_vector(x), succ));
+    dth(dt(std::move(new_ah), x, succ, &dropped_idx, &dropped_idx + 1));
   }
   assert(num_dropped >= 1);
+  dropped_idx = *ah.begin();
   ah.drop_point(ah.begin());
+  dth(dt(std::move(ah), std::move(x), succ, &dropped_idx, &dropped_idx + 1));
 }
 
 }  // namespace FC

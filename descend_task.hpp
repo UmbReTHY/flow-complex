@@ -27,11 +27,14 @@ private:
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
   using cp_type = critical_point<number_type, size_type>;
   using ah_type = affine_hull<point_cloud_type>;
+  using idx_cont = std::vector<size_type>;
 public:
-  descend_task(affine_hull<point_cloud_type> && ah,
-               eigen_vector && location,
-               critical_point<number_type, size_type> * succ)
-    : _ah(std::move(ah)), _succ(succ) {
+  template <class Iterator>
+  descend_task(affine_hull<point_cloud_type> ah,
+               eigen_vector location,
+               critical_point<number_type, size_type> * succ,
+               Iterator drop_begin, Iterator drop_end)
+    : _ah(std::move(ah)), _succ(succ), _dropvec(drop_begin, drop_end) {
     std::cout << "****DT-CONSTRUCTOR-BEGIN*****\n";
     std::cout << "address = " << this << std::endl;
     std::cout << "HULL MEMBERS: ";
@@ -43,7 +46,8 @@ public:
   }
   
   descend_task(descend_task && tmp)
-    : _ah(std::move(tmp._ah)), _location(), _succ(tmp._succ) {
+    : _ah(std::move(tmp._ah)), _location(), _succ(tmp._succ),
+      _dropvec(std::move(tmp._dropvec)) {
     _location.swap(tmp._location);
     std::cout << "DT-MOVE-CONSTR: address = " << this << std::endl;
   }
@@ -63,10 +67,13 @@ public:
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
-    std::vector<size_type> dropvec(pc.dim());
-    auto dropped_end = dropvec.begin();
+    typename idx_cont::iterator dropped_end;
+    { auto offset = _dropvec.size();
+      _dropvec.resize(pc.dim());
+      dropped_end = _dropvec.begin() + offset;
+    }    
     using idx_iterator = typename affine_hull<point_cloud_type>::iterator;
-    auto vf = make_vertex_filter(_ah, dropvec.begin(), dropped_end);
+    auto vf = make_vertex_filter(_ah, _dropvec.begin(), dropped_end);
     
     static int dt_id = 0;
     dt_id++;
@@ -90,21 +97,17 @@ public:
         nn = nearest_neighbor_along_ray(_location, ray, pc[*_ah.begin()],
                                         vf, nnvec.begin(), nnvec.begin() +
                                         (pc.dim() + 1 - _ah.size()));
-                                        
-//        std::cout << "t = " << nn.second << std::endl;
-                                        
       } catch(std::exception & e) {
         std::fprintf(stderr, "error: %s\n", e.what());
         std::exit(EXIT_FAILURE);
       }
       if (nn.first == nnvec.begin() or nn.second > 1.0) {
         std::cout << "DESCEND SUCCESSFUL\n";
-        _location = driver;  // TODO this assignment can be deferred until after the next if
-        // drop neg coeffs
+        _location = driver;
         dropped_end = drop_neg_coeffs(_location, lambda.head(_ah.size()), _ah,
-                                      dropvec.begin());  // TODO we know the negative coeffs already
-                                                         //      from the computation of the driver
-        if (dropped_end == dropvec.begin()) {
+                                      _dropvec.begin());  // TODO we know the negative coeffs already
+                                                          //      from the computation of the driver
+        if (dropped_end == _dropvec.begin()) {
           std::cout << "WITHIN CONVEX HULL\n";
           std::cout << "LOC = " << _location.transpose() << std::endl;
           auto const insert_pair = 
@@ -116,32 +119,27 @@ public:
               using at = ascend_task<point_cloud_type>;
               ath(at(_ah, _location, ray));  // TODO for dim() == 2, we can move the arguments
             }
-            if (insert_pair.second->index() > 2) {
-              spawn_sub_descends(dth, _location, _ah.size(),
-                                 insert_pair.second, _ah);
-              _succ = insert_pair.second;  // for all subsequent discoveries
-                                           // we have a new direct succ
-
-              std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
-              for (auto it = _ah.begin(); it != _ah.end(); ++it)
-                std::cout << *it << ", ";
-              std::cout << std::endl;  // TODO we could remember the dropped
-                                       //      vertex if spwan_sub_descends would not alter _ah
-            } else {
-              break;  // EXIT 1
-            }
+            if (insert_pair.second->index() > 1)
+              spawn_sub_descends(dth, _ah.size(), std::move(_location),
+                                 std::move(_ah), insert_pair.second);
           } else {
             // TODO test if it is necessary for correctness to ascend in the
             //      d - 1 cp even though the cp was already found
-            break;  // EXIT 2
           }
+          break;  // EXIT 1
         } else {
-          std::cout << "WITHIN AFFINE HULL\n";
+          std::cout << "WITHIN AFFINE HULL - ONE MORE TURN\n";
+          vf.reset(dropped_end);  // make the vertex filter consider all points
+                                  // of the point cloud again on subsequent calls
+          std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
+          for (auto it = _ah.begin(); it != _ah.end(); ++it)
+            std::cout << *it << ", ";
+          std::cout << std::endl;
         }
       } else {
         std::cout << "DESCEND GOT STOPPED\n";  // TODO: CONTINUE TRACKING HERE
         assert(nn.second < 1.0);
-        _location += nn.second * ray;  // TODO: since norm(ray) == dist-to-driver, we can remove the multiplication here
+        _location += nn.second * ray;
         size_type const size_before = _ah.size();
         std::cout << "_ah.size() = " << _ah.size() << std::endl;
         for (auto it = nnvec.begin(); it != nn.first; ++it) {
@@ -150,24 +148,18 @@ public:
                                //      correctness of spawn_sub_descends
           std::cout << "STOPPER-ID = " << *it << std::endl;
         }
-        std::cout << "_ah.size() = " << _ah.size() << std::endl;
-        spawn_sub_descends(dth, _location, size_before, _succ, _ah);
-        std::cout << "after sub-spawn: _ah.size() = " << _ah.size() << std::endl;
+        spawn_sub_descends(dth, size_before, std::move(_location),
+                           std::move(_ah), _succ);
+        break;  // EXIT 2
       }
-      vf.reset(dropped_end);  // make the vertex filter consider all points
-                              // of the point cloud again on subsequent calls
-      std::cout << "ONE MORE TURN\n";
-      std::cout << "SPAWNING(dt) DT with MEMBERS: ";   
-      for (auto it = _ah.begin(); it != _ah.end(); ++it)
-        std::cout << *it << ", ";
-      std::cout << std::endl;
     } while(true);
   }
   
 private:
-  ah_type      _ah;
-  eigen_vector _location;
-  cp_type *    _succ;
+  ah_type       _ah;
+  eigen_vector  _location;
+  cp_type *     _succ;
+  idx_cont      _dropvec;
 };
 
 }  // namespace FC

@@ -16,11 +16,19 @@ struct vertex_filter {
   vertex_filter(affine_hull<PointCloud> const& ah,
                 Iterator drop_begin, Iterator drop_end)
     : _ah(ah), _curr_idx(0), _drop_begin(drop_begin), _drop_end(drop_end) {
+    std::cout << "dropped-indices = ";
+    for (auto it = _drop_begin; it != _drop_end; ++it)
+      std::cout << *it << ", ";
+    std::cout << std::endl;
   }
   
   void reset(Iterator drop_end) {
     _curr_idx = 0;
     _drop_end = drop_end;
+    std::cout << "dropped-indices = ";
+    for (auto it = _drop_begin; it != _drop_end; ++it)
+      std::cout << *it << ", ";
+    std::cout << std::endl;
   }
 
   eigen_map const* operator()(size_type * idx_ptr) {

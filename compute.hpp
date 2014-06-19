@@ -25,6 +25,7 @@ flow_complex<typename base_t<decltype((*PointIterator())[0])>::type,
 compute_flow_complex (PointIterator begin, PointIterator end,
                       dim_type dim,
                       num_threads_t /*num_threads*/) {
+  std::cout << "*****************COMPUTE-START*************************\n";
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;

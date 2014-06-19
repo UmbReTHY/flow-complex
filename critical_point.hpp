@@ -61,7 +61,7 @@ public:
   }
   
   ~critical_point() {
-    std::cout << "**CP-DESTRUCT: " << this << std::endl;
+//    std::cout << "**CP-DESTRUCT: " << this << std::endl;
   }
   
   critical_point(critical_point const&) = delete;
