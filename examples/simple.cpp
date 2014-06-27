@@ -29,26 +29,31 @@ int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
   
-  size_type const NUM_PTS = 15;
+  size_type const NUM_PTS = 5;//15;
   size_type const DIM     =    3;
 
   // create a point cloud - uniform 1000 pt sampling of DIM-d space
   using eigen_matrix = Eigen::Matrix<number_type, Eigen::Dynamic, Eigen::Dynamic>;
   
-  unsigned int eigen_seed = 1403214468;//std::time(nullptr);
-  std::srand(eigen_seed);
+  unsigned int eigen_seed;// = 1403214468;//std::time(nullptr);
   
-  eigen_matrix data = eigen_matrix::Random(DIM, NUM_PTS);
+  eigen_matrix data;
   std::array<number_type const*, NUM_PTS> points;
-  for (size_type i = 0; i < NUM_PTS; ++i)
-    points[i] = data.col(i).data();
 
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
   using cmap = Eigen::Map<eigen_vector const>;
   
   int sum;
-//  do {
+  do {
+    eigen_seed = 1403866271;//std::time(nullptr);
     std::cout << "eigen_seed = " << eigen_seed << std::endl;
+    std::srand(eigen_seed);
+    
+    data = eigen_matrix::Random(DIM, NUM_PTS);
+    std::cout << "points = \n" << data << std::endl;
+    for (size_type i = 0; i < NUM_PTS; ++i)
+      points[i] = data.col(i).data();
+    
     auto fc = FC::compute_flow_complex<size_type, false>
               (points.cbegin(), points.cend(), DIM, /* nr of threads */ 8);
     
@@ -63,7 +68,7 @@ int main(int, char**) {
     for (auto const& el : hist)
       sum += (0 == (el.first % 2) ? el.second : -el.second);
     std::cout << "HIST-SUM = " << sum << std::endl;
-//  } while (sum == 1);
+  } while (sum == 1);
 //    print(cp);
 }
 

@@ -55,7 +55,7 @@ public:
               Eigen::Matrix<number_type, Eigen::Dynamic, 1> ray)
   : _ah(std::move(ah)), _location(), _ray() {
     std::cout << "***AT-CTOR: " << this << std::endl;
-    assert(_ah.size() == _ah.pc().dim());  // should be at a (d-1) cp
+    assert(_ah.size() == _ah.pc().dim());
     _location.swap(location);
     _ray.swap(ray);
   }
@@ -75,8 +75,8 @@ public:
   ascend_task & operator=(ascend_task const&) = delete;
   ascend_task & operator=(ascend_task &&) = delete;
   
-  template <typename DTHandler, typename CPHandler>
-  void execute(DTHandler & dth, CPHandler & cph) {
+  template <typename DTHandler, typename CPHandler, class CIHandler>
+  void execute(DTHandler & dth, CPHandler & cph, CIHandler cih) {
     auto const& pc = _ah.pc();
     std::vector<size_type> nnvec(pc.dim());  // for at most d additional nn
     std::vector<size_type> dropvec(pc.dim());  // stores recently dropped pts
@@ -107,15 +107,29 @@ public:
       }
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         std::cout << "NO STOPPER FOUND\n";
-//        assert(_ah.size() == pc.dim());  // TODO this might not be justified
         if (hop_count > 1) {  // no dt back to idx-(d-1) cp
           std::cout << "SPAWNED DESCEND BACK\n";
-          size_type size_before = _ah.size();
           auto * inf_ptr = cph(cp_type(pc.dim())).second;  // addr of cp at inf
-          for (auto it = dropvec.begin(); it != dropped_end; ++it)
-            _ah.add_point(*it);
-          spawn_sub_descends(dth, size_before, std::move(_location),
-                             std::move(_ah), inf_ptr);
+          size_type const num_dropped = std::distance(dropvec.begin(), dropped_end);
+          if (0 == num_dropped) {
+            using dt = descend_task<point_cloud_type>;
+            dth(dt(std::move(_ah), std::move(_location), inf_ptr,
+                   dropped_end, dropped_end));  // same iter. -> range empty
+          } else {  // we dropped before flowing to infinity
+            for (auto it = dropvec.begin(); it != dropped_end; ++it)
+              _ah.add_point(*it);
+            using ci_type = circumsphere_ident<size_type>;
+            if (cih(ci_type(_ah.begin(), _ah.end()))) {
+              std::cout << "CIRCUMSPHERE NEWLY FOUND\n";
+              auto & pos_offsets = dropvec;  // reuse
+              pos_offsets.resize(_ah.size() - num_dropped);  // shrink
+              std::iota(pos_offsets.begin(), pos_offsets.end(), 0);
+              spawn_sub_descends(dth, pos_offsets.begin(), pos_offsets.end(),
+                                 std::move(_location), std::move(_ah), inf_ptr);
+            } else {
+              std::cout << "CIRCUMSPHERE ALREADY FOUND\n";
+            }
+          }
         }
         break;  // EXIT 1
       } else {
@@ -126,8 +140,8 @@ public:
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
           std::cout << "FINITE MAX SUSPECT\n";
-          dropped_end = drop_neg_coeffs(_location, lambda, _ah,
-                                        dropvec.begin());
+          dropped_end = drop_neg_indices(_location, lambda, _ah,
+                                         dropvec.begin());
           if (dropvec.begin() == dropped_end) {  // no points dropped
             std::cout << "FINITE MAX INDEED\n";
             std::cout << "MAX-LOC " << _location.transpose() << std::endl;
@@ -136,7 +150,10 @@ public:
                                       std::move(sq_dist)));
             if (r_pair.first) {  // only spawn descends for new maxima
               auto max_ptr = r_pair.second;
-              spawn_sub_descends(dth, _ah.size(),
+              auto & pos_offsets = dropvec;  // reuse
+              pos_offsets.resize(_ah.size());  // shrink
+              std::iota(pos_offsets.begin(), pos_offsets.end(), 0);
+              spawn_sub_descends(dth, pos_offsets.begin(), pos_offsets.end(),
                                  std::move(_location), std::move(_ah), max_ptr);
             }
             break;    // EXIT 2 - none have been dropped -> finite max
@@ -176,7 +193,7 @@ private:
     using Float = float;
     std::random_device rd;
 //    int seed = rd();
-    int seed = -460063112;
+    int seed = 1874874433;
     std::cout << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]

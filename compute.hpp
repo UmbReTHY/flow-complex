@@ -32,6 +32,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   using pc_type = point_cloud<number_type, size_type, Aligned>;
   using at_type = ascend_task<pc_type>;
   using dt_type = descend_task<pc_type>;
+  using ci_type = circumsphere_ident<size_type>;
 
   // 1) init data structures
   pc_type pc(begin, end, dim);
@@ -42,12 +43,25 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     for (auto it = indices.cbegin(); it != indices.cend(); ++it)
       fc.insert(cp_type(it, it + 1, 0));
   }
-  std::stack<at_type> qa;
-  std::stack<dt_type> qd;
+  std::stack<at_type>  qa;
+  std::stack<dt_type>  qd;
+  std::vector<ci_type> aci;
+  std::vector<ci_type> dci;
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
-  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};  // TODO to safe one CTOR call: emplace insert
+  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};  // TODO to safe one CTOR call: 
+                                                                        //      emplace insert
+  auto cih = [] (std::vector<ci_type> & ci_store, ci_type ci) {
+    if (ci_store.end() == std::find(ci_store.begin(), ci_store.end(), ci)) {
+      ci_store.push_back(std::move(ci));
+      return true;
+    }
+    return false;
+  };
+  auto acih = std::bind(cih, std::ref(aci), std::placeholders::_1);
+  auto dcih = std::bind(cih, std::ref(dci), std::placeholders::_1);
+  
   // 3) seed initial ascend task(s)
   qa.emplace(pc);
   // 4) process all tasks - qa first = breadth first search
@@ -55,11 +69,11 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     if (not qa.empty()) {
       at_type at(std::move(qa.top()));  // TODO code duplication: write "process task" function
       qa.pop();
-      at.execute(dth, cph);
+      at.execute(dth, cph, acih);
     } else {
       dt_type dt(std::move(qd.top()));
       qd.pop();  // TODO: these two steps above have to be atomic
-      dt.execute(dth, ath, cph);
+      dt.execute(dth, ath, cph, dcih);
     }
   }
   

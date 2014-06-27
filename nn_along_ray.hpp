@@ -27,6 +27,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
                            Eigen::MatrixBase<Derived3> const& p,
                            vertex_filter<PointCloud, DropIterator> & get_next,
                            NNIterator begin, NNIterator end) {
+  std::cout << "NORM OF RAY " << v.squaredNorm() << std::endl;
   using number_type = typename Derived1::Scalar;
   using vf_type = vertex_filter<PointCloud, DropIterator>;
   // compute some values that don't depend on the candidate points
