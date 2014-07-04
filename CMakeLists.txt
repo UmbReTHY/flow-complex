@@ -2,15 +2,23 @@ project(flow_complex)
 cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
-include(cotire)
 
-set(BASE_FLAGS "-std=c++11 -fcolor-diagnostics")
-set(DIAG_FLAGS "-Wall -Wextra -g")
-set(REL_FLAGS  "-O2 -DNDEBUG -pipe -fomit-frame-pointer")
-set (CMAKE_CXX_FLAGS ${BASE_FLAGS})
-set (CMAKE_CXX_FLAGS_DEBUG "${DIAG_FLAGS} -O0")
-set (CMAKE_CXX_FLAGS_RELEASE ${REL_FLAGS})
-set (CMAKE_CXX_FLAGS_RELWITHDEBINFO ${REL_FLAGS} ${DIAG_FLAGS})
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set (CMAKE_CXX_FLAGS "-fcolor-diagnostics")
+  endif()
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  set (CMAKE_CXX_FLAGS_DEBUG "-O0 Wall -Wextra -g")
+  set (CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG -O3")
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  # using GCC
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+  # using Intel C++
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  # using Visual Studio C++
+endif()
 
 option(BUILD_TESTS
        "builds the tests and provide a test target for Makefiles"
