@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <ostream>
 
 #include <Eigen/Core>
 
@@ -111,12 +112,14 @@ public:
   */
   template <typename Derived1, typename Derived2>
   void project(Eigen::MatrixBase<Derived1> const& x,
-               Eigen::MatrixBase<Derived2> const& lambda) const {
+               Eigen::MatrixBase<Derived2> const& lambda_const) const {
     assert(size() > 0);
+    assert(lambda_const.size() == size());
+    using lambda_t = Eigen::MatrixBase<Derived2>;
+    auto & lambda = const_cast<lambda_t &>(lambda_const);
     if (_members.size() > 1)
-      _dyn_qr.solve(x - _pc[*begin()], const_cast<Eigen::MatrixBase<Derived2> &>(lambda).tail(lambda.size() - 1));
-    const_cast<Eigen::MatrixBase<Derived2> &>(lambda)[0]
-    = 1 - lambda.tail(lambda.size() - 1).sum();
+      _dyn_qr.solve(x - _pc[*begin()], lambda.tail(lambda_const.size() - 1));
+    lambda[0] = 1 - lambda_const.tail(lambda_const.size() - 1).sum();
   }
 
 private:
@@ -132,6 +135,14 @@ private:
   member_container _members;  // TODO write own dynarray class, to save the capacity pointer
   point_cloud_type const& _pc;
 };
+
+template <class PointCloud>
+std::ostream & operator<<(std::ostream & os, affine_hull<PointCloud> const& ah) {
+  os << "HULL MEMBERS: ";
+  for (auto it = ah.begin(); it != ah.end(); ++it)
+    os << *it << ", ";
+  return os;
+}
 
 }  // namespace FC
 

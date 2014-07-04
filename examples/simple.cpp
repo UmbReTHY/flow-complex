@@ -45,7 +45,8 @@ int main(int, char**) {
   
   int sum;
   do {
-    eigen_seed = 1403866271;//std::time(nullptr);
+//    eigen_seed = 1404468351;
+    eigen_seed = std::time(nullptr);
     std::cout << "eigen_seed = " << eigen_seed << std::endl;
     std::srand(eigen_seed);
     

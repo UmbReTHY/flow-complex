@@ -45,7 +45,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   }
   std::stack<at_type>  qa;
   std::stack<dt_type>  qd;
-  std::vector<ci_type> aci;
+//  std::vector<ci_type> aci;
   std::vector<ci_type> dci;
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
@@ -59,7 +59,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     }
     return false;
   };
-  auto acih = std::bind(cih, std::ref(aci), std::placeholders::_1);
+//  auto acih = std::bind(cih, std::ref(aci), std::placeholders::_1);
   auto dcih = std::bind(cih, std::ref(dci), std::placeholders::_1);
   
   // 3) seed initial ascend task(s)
@@ -69,7 +69,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     if (not qa.empty()) {
       at_type at(std::move(qa.top()));  // TODO code duplication: write "process task" function
       qa.pop();
-      at.execute(dth, cph, acih);
+      at.execute(dth, ath, cph);
     } else {
       dt_type dt(std::move(qd.top()));
       qd.pop();  // TODO: these two steps above have to be atomic
