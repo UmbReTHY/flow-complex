@@ -3,14 +3,13 @@
 
 #include <cassert>
 
-#include <algorithm>
 #include <iterator>
-#include <vector>
 #include <ostream>
+#include <utility>
+#include <vector>
 
 #include <Eigen/Core>
 
-#include "point_cloud.hpp"
 #include "dynamic_qr.hpp"
 
 namespace FC {
@@ -27,9 +26,8 @@ public:
 private:
   using member_container = std::vector<size_type>;
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-  using eigen_cmap = Eigen::Map<eigen_vector const>;  // TODO set Aligned flag based on point cloud
 public:
-  typedef typename member_container::const_iterator iterator;
+  typedef typename member_container::const_iterator const_iterator;
   
   affine_hull(point_cloud_type const& pc)
     : _dyn_qr(pc.dim()), _members(), _pc(pc) {
@@ -54,12 +52,12 @@ public:
   affine_hull & operator=(affine_hull &&) = delete;
   affine_hull & operator=(affine_hull const&) = delete;
   
-  template <typename Index>
-  void add_point(Index const idx) {
+  void add_point(size_type const idx) {
     assert(not is_member(idx));
     assert(size() <= _pc.dim());
     // it requires an idx that serves as the origin for adding a column
     if (size() > 0)
+      // TODO inspect compiler code: does this create unnecessary temporaries?
       _dyn_qr.append_column(_pc[idx] - _pc[_members.front()]);
     _members.push_back(idx);
   }
@@ -67,7 +65,7 @@ public:
   /**
     @brief invalidates all iterators at and after it
   */
-  void drop_point(iterator it) {
+  void drop_point(const_iterator it) {
     assert(is_member(it));
     if (_members.size() > 1) {
       bool const del_orig = _members.begin() == it;
@@ -78,6 +76,8 @@ public:
       // if there's at least one column left after deleting a member
       // we need to perform a rank-one update on it
       if (del_orig && _members.size() > 2) {
+        // TODO inspect the compiler behavior: does Eigen::Ones generate a
+        //      temporary
         _dyn_qr.rank_one_update(_pc[_members.front()] - _pc[_members[1]],
                                 eigen_vector::Ones(_dyn_qr.num_cols()));
       }
@@ -94,11 +94,11 @@ public:
     return _members.size();
   }
   
-  iterator begin() const {
+  const_iterator begin() const {
     return _members.begin();
   }
   
-  iterator end() const {
+  const_iterator end() const {
     return _members.end();
   }
   
@@ -123,12 +123,8 @@ public:
   }
 
 private:
-  bool is_member(iterator it) const {
+  bool is_member(const_iterator it) const {
     return (_members.begin() <= it) and (it < _members.end());
-  }
-
-  bool is_member(size_type const idx) const {  // TODO deprecate/remove
-    return is_member(std::find(_members.begin(), _members.end(), idx));
   }
 
   dynamic_qr<number_type> _dyn_qr;
