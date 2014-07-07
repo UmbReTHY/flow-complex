@@ -2,15 +2,13 @@
 #define ASCEND_TASK_HPP_
 
 #include <cassert>
-#include <cstdio>
-#include <cstdint>
 
-#include <algorithm>
-#include <utility>
 #include <random>
 #include <exception>
-#include <iostream>
 #include <iterator>
+#include <ostream>
+#include <tuple>
+#include <utility>
 
 #include <Eigen/Core>
 
@@ -21,7 +19,7 @@
 #include "nn_along_ray.hpp"
 #include "update_ray.hpp"
 #include "vertex_filter.hpp"
-#include "utility.hpp"
+#include "logger.hpp"
 
 namespace FC {
 
@@ -35,15 +33,13 @@ public:
   typedef typename point_cloud_type::number_type        number_type;
   typedef typename point_cloud_type::size_type          size_type;
   typedef Eigen::Matrix<number_type, Eigen::Dynamic, 1> eigen_vector;
-private:
-  typedef critical_point<number_type, size_type>        cp_type;
-public:
+
   /**
     @brief use this constructor, to spawn an ascend_task at a random position
   */
   ascend_task(point_cloud_type const& pc)
     : _ah(pc), _location(pc.dim()), _ray(pc.dim()) {
-    std::cout << "***AT-CTOR: " << this << std::endl;
+    Logger() << "***AT-CTOR: " << this << std::endl;
     std::tuple<size_type, number_type, bool> nn;
     // reseed as long as the nearest neighbor is not unique
     do {
@@ -64,7 +60,7 @@ public:
               eigen_vector && ray,
               size_type dropped_idx)
   : _ah(std::move(ah)), _location(), _ray(), _dropped_idx(dropped_idx) {
-    std::cout << "***AT-CTOR: " << this << std::endl;
+    Logger() << "***AT-CTOR: " << this << std::endl;
     assert(_ah.size() == _ah.pc().dim());
     _location.swap(location);
     _ray.swap(ray);
@@ -73,13 +69,13 @@ public:
   ascend_task (ascend_task && tmp)
     : _ah(std::move(tmp._ah)), _location(), _ray(),
       _dropped_idx(tmp._dropped_idx)  {
-    std::cout << "***AT-MOVE-CTOR: " << this << std::endl;
+    Logger() << "***AT-MOVE-CTOR: " << this << std::endl;
     _location.swap(tmp._location);
     _ray.swap(tmp._ray);
   }
   
   ~ascend_task() {
-    std::cout << "***AT-DESTRUCT: " << this << std::endl;
+    Logger() << "***AT-DESTRUCT: " << this << std::endl;
   }
   
   ascend_task (ascend_task const&) = delete;
@@ -90,7 +86,7 @@ public:
   void execute(DTHandler & dth, ATHandler & ath, CPHandler & cph) {
     auto const& pc = _ah.pc();
     // TODO the vectors can be allocated as thread local storage
-    std::vector<size_type> nnvec(pc.dim() + 1);
+    std::vector<size_type> nnvec(pc.dim() + 1);  // TODO dynarray
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
     // there's only 2 cases of ascend tasks: completely new, and those starting
@@ -101,21 +97,17 @@ public:
     auto * dropped_end = (_ah.size() == 1 ? dropped_begin
                                           : std::next(dropped_begin));
     // TODO vertex filter in descend task takes a single index at max too
-    //                    instead of giving a range, give a single pointer instead
+    //      -> instead of giving a range, give a single pointer instead
     auto vf = make_vertex_filter(_ah, dropped_begin, dropped_end);
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     
-    static int id = 0;
-    std::cout << "ASCEND-TASK-ID: " << ++id << std::endl;
-    
+    Logger() << "ASCEND-TASK-STARTS\n";
     do {
       try {
-
-        std::cout << _ah << std::endl;
-        std::cout << "LOCATION = " << _location.transpose() << std::endl;
-        std::cout << "DRIVER = " << driver.transpose() << std::endl;
-        std::cout << "RAY = " << _ray.transpose() << std::endl;
-
+        Logger() << _ah << std::endl
+                 << "LOCATION = " << _location.transpose() << std::endl
+                 << "DRIVER = " << driver.transpose() << std::endl
+                 << "RAY = " << _ray.transpose() << std::endl;
         auto const max_nn = pc.dim() + 1 - _ah.size();
         nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
                                         vf, nnvec.begin(),
@@ -126,21 +118,19 @@ public:
       }
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         assert(_ah.size() == pc.dim());
-        std::cout << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
+        Logger() << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
         // TODO introduce proxy store: don't descend from the same proxy twice
-        std::cout << "SPAWNING SUB-DESCENDS\n";
         // TODO find a cheaper way to get the inf-ptr
+        using cp_type = critical_point<number_type, size_type>;
         auto * inf_ptr = cph(cp_type(pc.dim())).second;  // addr of cp at inf
-//        size_type const num_dropped = _dropvec.size();
         if (dropped_begin == dropped_end) {
           using dt = descend_task<point_cloud_type>;
           size_type const dummy_ignore = *_ah.begin();
           dth(dt(std::move(_ah), std::move(_location), inf_ptr, dummy_ignore));
         } else {  // we dropped before flowing to infinity
-          std::cout << "DROPPED BEFORE FLOW TO INF\n";
+          Logger() << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
           assert(pos_offsets.size() >= _ah.size());
-//          std::iota(pos_offsets.begin(), pos_offsets.end(), 0);
           _ah.add_point(_dropped_idx);  // append the dropped point
           _ah.project(_location, lambda);
           // TODO in case we came from an ascend with multiple negative indices
@@ -152,7 +142,7 @@ public:
         }
         break;  // EXIT 1
       } else {
-        std::cout << "STOPPER FOUND\n";
+        Logger() << "STOPPER FOUND\n";
         _location += nn.second * _ray;
         for (auto it = nnvec.begin(); it != nn.first; ++it)
           _ah.add_point(*it);
@@ -164,7 +154,7 @@ public:
                               cph, ath, dth);
           break;  // EXIT 2
         } else {
-          std::cout << "NOT MAX YET - NEED TO CLIMB\n";
+          Logger() << "NOT MAX YET - NEED TO CLIMB\n";
           update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
                                            driver, _ray);
           dropped_end = dropped_begin;
@@ -174,7 +164,7 @@ public:
       vf.reset(dropped_end);  // make the vertex filter consider all points
                               // of the point cloud again on subsequent calls
     } while(true);
-    std::cout << "***AT-COMPLETE***\n";
+    Logger() << "***AT-COMPLETE***\n";
   }
   
 private:
@@ -191,8 +181,7 @@ private:
     using Float = float;
     std::random_device rd;
     int seed = rd();
-//    int seed = -374239441;
-    std::cout << "seed = " << seed << std::endl;
+    Logger() << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
     std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
