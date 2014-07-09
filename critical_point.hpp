@@ -7,6 +7,9 @@
 #include <iterator>
 #include <vector>
 
+#include "logger.hpp"
+#include "utility.hpp"
+
 namespace FC {
 
 /**
@@ -30,7 +33,7 @@ public:
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist)
     : _indices(idx_begin, idx_end), _sq_dist(sq_dist) {
-    std::cout << "**CP-CTOR: " << this << std::endl;
+    Logger() << "**CP-CTOR: " << this << std::endl;
     std::sort(_indices.begin(), _indices.end());
   }
   
@@ -39,7 +42,7 @@ public:
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist, self_type * succ)
     : critical_point(idx_begin, idx_end, std::move(sq_dist)) {  // TODO make delegated-to ctor the most general one
-    std::cout << "**CP-CTOR: " << this << std::endl;
+    Logger() << "**CP-CTOR: " << this << std::endl;
     assert(succ);
     _successors.push_back(succ);
   }
@@ -47,13 +50,13 @@ public:
   // constructor for cp at inf
   critical_point(size_type index)
     : _index(index) {
-    std::cout << "**CP-INF-CTOR: " << this << std::endl;
+    Logger() << "**CP-INF-CTOR: " << this << std::endl;
   }
 
   // constructors and assignment-operators
   critical_point(critical_point && tmp) : _indices(std::move(tmp._indices)),
     _successors(std::move(tmp._successors)) {
-    std::cout << "**CP-MOVE-CTOR: " << this << std::endl;
+    Logger() << "**CP-MOVE-CTOR: " << this << std::endl;
     if (is_max_at_inf())
       _index = std::move(tmp._index);
     else
@@ -61,10 +64,10 @@ public:
   }
   
   ~critical_point() {
-//    std::cout << "**CP-DESTRUCT: " << this << std::endl;
+//    Logger() << "**CP-DESTRUCT: " << this << std::endl;
   }
   
-  critical_point(critical_point const&) = delete;
+  critical_point(critical_point const&) = default;
   critical_point & operator=(critical_point const&) = delete;
   critical_point & operator=(critical_point &&) = delete;
 
@@ -144,6 +147,14 @@ bool operator!=(critical_point<number_type, size_type> const& lhs,
                 critical_point<number_type, size_type> const& rhs) {
   return !(lhs == rhs);
 }
+
+struct CPHash {
+  template <class CriticalPoint>
+  std::size_t operator()(CriticalPoint const& cp) const {
+    RangeHash range_hash;
+    return range_hash(cp.idx_begin(), cp.idx_end());
+  }
+};
 
 }  // namespace FC
 

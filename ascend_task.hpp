@@ -38,7 +38,7 @@ public:
     @brief use this constructor, to spawn an ascend_task at a random position
   */
   ascend_task(point_cloud_type const& pc)
-    : _ah(pc), _location(pc.dim()), _ray(pc.dim()) {
+    : _ah(pc), _location(pc.dim()), _ray(pc.dim()), _dropped(false, 0) {
     Logger() << "***AT-CTOR: " << this << std::endl;
     std::tuple<size_type, number_type, bool> nn;
     // reseed as long as the nearest neighbor is not unique
@@ -59,16 +59,25 @@ public:
               eigen_vector && location,
               eigen_vector && ray,
               size_type dropped_idx)
-  : _ah(std::move(ah)), _location(), _ray(), _dropped_idx(dropped_idx) {
+  : _ah(std::move(ah)), _location(), _ray(), _dropped(true, dropped_idx) {
     Logger() << "***AT-CTOR: " << this << std::endl;
     assert(_ah.size() == _ah.pc().dim());
     _location.swap(location);
     _ray.swap(ray);
   }
   
+    /**
+    @brief spawn an ascend task that upflows from a d-1 Delaunay facet
+  */
+  ascend_task(affine_hull<point_cloud_type> ah,
+              eigen_vector && location,
+              eigen_vector && ray)
+  : ascend_task(std::move(ah), std::move(location), std::move(ray), 0) {
+    _dropped.first = false;
+  }
+  
   ascend_task (ascend_task && tmp)
-    : _ah(std::move(tmp._ah)), _location(), _ray(),
-      _dropped_idx(tmp._dropped_idx)  {
+    : _ah(std::move(tmp._ah)), _location(), _ray(), _dropped(tmp._dropped) {
     Logger() << "***AT-MOVE-CTOR: " << this << std::endl;
     _location.swap(tmp._location);
     _ray.swap(tmp._ray);
@@ -93,9 +102,9 @@ public:
     // with d points on the boundary. The first case has not dropped yet, the
     // 2nd case has always dropped before
     assert(_ah.size() == 1 or _ah.size() == pc.dim());
-    auto *const dropped_begin = &_dropped_idx;
-    auto * dropped_end = (_ah.size() == 1 ? dropped_begin
-                                          : std::next(dropped_begin));
+    auto *const dropped_begin = &_dropped.second;
+    auto * dropped_end = (_dropped.first ? std::next(dropped_begin)
+                                         : dropped_begin);
     // TODO vertex filter in descend task takes a single index at max too
     //      -> instead of giving a range, give a single pointer instead
     auto vf = make_vertex_filter(_ah, dropped_begin, dropped_end);
@@ -123,15 +132,11 @@ public:
         // TODO find a cheaper way to get the inf-ptr
         using cp_type = critical_point<number_type, size_type>;
         auto * inf_ptr = cph(cp_type(pc.dim())).second;  // addr of cp at inf
-        if (dropped_begin == dropped_end) {
-          using dt = descend_task<point_cloud_type>;
-          size_type const dummy_ignore = *_ah.begin();
-          dth(dt(std::move(_ah), std::move(_location), inf_ptr, dummy_ignore));
-        } else {  // we dropped before flowing to infinity
+        if (_dropped.first) {  // we dropped before flowing to infinity
           Logger() << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
           assert(pos_offsets.size() >= _ah.size());
-          _ah.add_point(_dropped_idx);  // append the dropped point
+          _ah.add_point(_dropped.second);  // append the dropped point
           _ah.project(_location, lambda);
           // TODO in case we came from an ascend with multiple negative indices
           //      this ascend task has one or more twins, that might also flow to infinity
@@ -179,8 +184,8 @@ private:
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
-    std::random_device rd;
-    int seed = rd();
+//    std::random_device rd;
+    int seed = 0;//rd();
     Logger() << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
@@ -212,7 +217,7 @@ private:
   affine_hull<point_cloud_type> _ah;
   eigen_vector                  _location;
   eigen_vector                  _ray;
-  size_type                     _dropped_idx;
+  std::pair<bool, size_type>    _dropped;
 };
 
 }  // namespace

@@ -3,9 +3,11 @@
 
 #include <algorithm>
 #include <utility>
-#include <list>
+
+#include <tbb/concurrent_unordered_set.h>
 
 #include "critical_point.hpp"
+#include "logger.hpp"
 
 namespace FC {
 
@@ -17,7 +19,7 @@ class flow_complex {
     typedef critical_point<_number_type, _size_type>     cp_type;
 
   private:
-    using cp_container = std::list<cp_type>;
+    using cp_container = tbb::concurrent_unordered_set<cp_type, CPHash>;
     
   public:
     typedef typename cp_container::iterator             iterator;
@@ -27,7 +29,7 @@ class flow_complex {
       @brief initializes the flow complex with a maximum at infinity
     */
     flow_complex(size_type dim) {
-      _cps.emplace_back(dim);
+      _cps.insert(cp_type(dim));
     }
     // copy- and move-constructor
     flow_complex(flow_complex const&) = default;
@@ -65,19 +67,13 @@ class flow_complex {
     */
     std::pair<bool, cp_type *> insert(cp_type && cp) {
       std::pair<bool, cp_type *> r;
-      auto it = std::find(_cps.begin(), _cps.end(), cp);
-      std::cout << "index = " << cp.index() << std::endl;
-      if (_cps.end() == it) {
-        std::cout << "NOT FOUND\n";
-        // insert the new cp
-        _cps.push_back(std::move(cp));  
-        r.first  = true;
-        r.second = &_cps.back();
-      } else {
-        std::cout << "FOUND\n";
-        r.first = false;
-        r.second = &*it;
-      }      
+      auto ret_pair = _cps.insert(cp);
+      r.first =   ret_pair.second;
+      r.second = &*ret_pair.first;
+      if (r.first)
+        Logger() << "CRITICAL POINT IS NEW!\n";
+      else
+        Logger() << "CRITICAL POINT WAS FOUND ALREADY\n";
       return r;
     }
     

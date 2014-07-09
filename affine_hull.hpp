@@ -3,6 +3,7 @@
 
 #include <cassert>
 
+#include <algorithm>
 #include <iterator>
 #include <ostream>
 #include <utility>
@@ -54,7 +55,7 @@ public:
   affine_hull & operator=(affine_hull const&) = delete;
   
   void add_point(size_type const idx) {
-    assert(not is_member(idx));
+    assert(not is_member(std::find(_members.begin(), _members.end(), idx)));
     assert(size() <= _pc.dim());
     // it requires an idx that serves as the origin for adding a column
     if (size() > 0)

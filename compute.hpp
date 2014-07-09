@@ -6,10 +6,13 @@
 #include <utility>
 #include <vector>
 
-#include "flow_complex.hpp"
-#include "point_cloud.hpp"
+#include <tbb/concurrent_unordered_set.h>
+
 #include "ascend_task.hpp"
 #include "descend_task.hpp"
+#include "flow_complex.hpp"
+#include "logger.hpp"
+#include "point_cloud.hpp"
 #include "utility.hpp"
 
 namespace FC {
@@ -25,7 +28,7 @@ flow_complex<typename base_t<decltype((*PointIterator())[0])>::type,
 compute_flow_complex (PointIterator begin, PointIterator end,
                       dim_type dim,
                       num_threads_t /*num_threads*/) {
-  std::cout << "*****************COMPUTE-START*************************\n";
+  Logger() << "*****************COMPUTE-START*************************\n";
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;
@@ -46,18 +49,15 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   std::stack<at_type>  qa;
   std::stack<dt_type>  qd;
 //  std::vector<ci_type> aci;
-  std::vector<ci_type> dci;
+  tbb::concurrent_unordered_set<ci_type, CIHash> dci;
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
   auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};  // TODO to safe one CTOR call: 
                                                                         //      emplace insert
-  auto cih = [] (std::vector<ci_type> & ci_store, ci_type ci) {
-    if (ci_store.end() == std::find(ci_store.begin(), ci_store.end(), ci)) {
-      ci_store.push_back(std::move(ci));
-      return true;
-    }
-    return false;
+  auto cih = [] (tbb::concurrent_unordered_set<ci_type, CIHash> & ci_store,
+                 ci_type ci) {
+    return ci_store.insert(ci).second;
   };
 //  auto acih = std::bind(cih, std::ref(aci), std::placeholders::_1);
   auto dcih = std::bind(cih, std::ref(dci), std::placeholders::_1);

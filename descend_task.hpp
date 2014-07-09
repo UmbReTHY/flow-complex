@@ -1,17 +1,18 @@
 #ifndef DESCEND_TASK_HPP_
 #define DESCEND_TASK_HPP_
 
+#include <ostream>
 #include <utility>
 #include <vector>
 
 #include <Eigen/Core>
 
+#include "affine_hull.hpp"
 #include "common.hpp"
 #include "critical_point.hpp"
-#include "affine_hull.hpp"
 #include "update_ray.hpp"
-#include "vertex_filter.hpp"
 #include "utility.hpp"
+#include "vertex_filter.hpp"
 
 namespace FC {
 
@@ -30,37 +31,29 @@ public:
 private:
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
   using cp_type = critical_point<number_type, size_type>;
-  using ah_type = affine_hull<point_cloud_type>;
-  using idx_cont = std::vector<size_type>;
 public:
+
   descend_task(affine_hull<point_cloud_type> ah,
                eigen_vector && location,
                critical_point<number_type, size_type> * succ,
                size_type ignore_idx)
     : _ah(std::move(ah)), _location(), _succ(succ), _ignore_idx(ignore_idx) {
-
-    std::cout << "****DT-CONSTRUCTOR-BEGIN*****\n";
-    std::cout << "address = " << this << std::endl;
-    std::cout << "HULL MEMBERS: ";
-    for (auto it = _ah.begin(); it != _ah.end(); ++it)
-      std::cout << *it << ", ";
-    std::cout << std::endl;
-    std::cout << "****DT-CONSTRUCTOR-END*****\n";
-
+    Logger() << "****DT-CONSTRUCTOR-BEGIN*****\n"
+             << "address = " << this << std::endl
+             << _ah << std::endl
+             << "****DT-CONSTRUCTOR-END*****\n";
     _location.swap(location);
   }
   
   descend_task(descend_task && tmp)
     : _ah(std::move(tmp._ah)), _location(), _succ(tmp._succ),
       _ignore_idx(tmp._ignore_idx) {
-
-    std::cout << "DT-MOVE-CONSTR: address = " << this << std::endl;
-
+    Logger() << "DT-MOVE-CONSTR: address = " << this << std::endl;
     _location.swap(tmp._location);
   }
   
   ~descend_task() {
-    std::cout << "DELETE-DT: " << this << std::endl;
+    Logger() << "DELETE-DT: " << this << std::endl;
   }
   
   descend_task(descend_task const&) = delete;
@@ -74,37 +67,35 @@ public:
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
     std::vector<size_type> idx_store(pc.dim() + 1);
+    // TODO maybe collaps with idx_store
+    std::vector<size_type> bigger_store(pc.size());
     eigen_vector ray;
     update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
     
-    static int dt_id = 0;
-    dt_id++;
-    std::cout << "DESCEND_TASK_ID = " << dt_id << std::endl;
-    std::cout << "address = " << this << std::endl;
-    std::cout << _ah << std::endl;
-    std::cout << "LOCATION: " << _location.transpose() << std::endl;
-    std::cout << "RAY: " << ray.transpose() << std::endl;
-
+    Logger() << "DESCEND-TASK STARTS: address = " << this << std::endl
+             << _ah << std::endl
+             << "LOCATION: " << _location.transpose() << std::endl
+             << "RAY: " << ray.transpose() << std::endl;
     size_type stopper;  // dts asumme at most 1 stopper: non-degenerate case!
     auto nn = std::make_pair(&stopper, number_type(0));
     try {
-      auto vf = make_vertex_filter(_ah, &_ignore_idx, std::next(&_ignore_idx));
+      auto vf = make_vertex_filter(_ah, driver, _ignore_idx, bigger_store.begin());
       nn = nearest_neighbor_along_ray(_location, ray, pc[*_ah.begin()], vf,
                                       &stopper, std::next(&stopper));
     } catch(std::exception & e) {
-      std::fprintf(stderr, "error: %s\n", e.what());
+      std::cerr << "error: " << e.what() << std::endl;
       std::exit(EXIT_FAILURE);
     }
     auto & pos_offsets = idx_store;
     if (nn.first == &stopper or nn.second > 1.0) {
-      std::cout << "DESCEND SUCCESSFUL\n";
+      Logger() << "DESCEND SUCCESSFUL\n";
       auto & x = driver;
       assert(_ah.size() <= lambda.size());
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
       if (std::distance(pos_offsets.begin(), pos_end) == _ah.size()) {
-        std::cout << "WITHIN CONVEX HULL\n";
-        std::cout << "LOC = " << x.transpose() << std::endl;
+        Logger() << "WITHIN CONVEX HULL\n";
+        Logger() << "LOC = " << x.transpose() << std::endl;
         number_type const sq_dist = (x - _ah.pc()[*_ah.begin()]).squaredNorm();
         auto const insert_pair =  cph(cp_type(_ah.begin(), _ah.end(), sq_dist,
                                       _succ));
@@ -124,7 +115,7 @@ public:
           // TODO update incidences of insert_pair.second
         }
       } else {
-        std::cout << "ONLY AFFINE HULL\n";
+        Logger() << "ONLY AFFINE HULL\n";
         // TODO move _ah and x if the ASCEND branch below won't be executed
         spawn_sub_descends(dth, pos_offsets.begin(), pos_end,
                            eigen_vector(x), _ah, _succ);
@@ -132,37 +123,29 @@ public:
       // handles both the critical and non-critical case
       using ci_type = circumsphere_ident<size_type>;
       if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {
-        std::cout << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
+        Logger() << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
         using at = ascend_task<point_cloud_type>;
         auto const& t = nn.second;
-        if (nn.first != &stopper) { // there is a stopper
-          assert(t > 1.0);
-          _location += t * ray;
-          _ah.add_point(stopper);
-          // TODO if this routine could return weather the simplex was critical or not,
-          //      we could add just another succ to spawned sub descends spawned from here
-          //      an avoid re-traversal of descends back to where this new maxima came from
-          simplex_case_upflow(std::move(_ah), eigen_vector(_location), lambda,
-                              std::move(ray), driver, idx_store.begin(),
-                              idx_store.end(), cph, ath, dth);
-        } else {
-          // TODO introduce vector of succs -> for alle spawn_sub_descends
-          //      we just have to update this tasks succ vector
-          //      (with the cp at inf) and pass it; we have to move this check
-          //      way up to the top, however
-        }
+        assert(nn.first == &stopper);  // there is no stopper -> radius search
+        ath(at(std::move(_ah), std::move(driver), std::move(ray)));
+        // TODO this case has changed, especially when the subsequend at flows to inf
+        // TODO introduce vector of succs -> for alle spawn_sub_descends
+        //      we just have to update this tasks succ vector
+        //      (with the cp at inf) and pass it; we have to move this check
+        //      way up to the top, however
       } else {
-        std::cout << "NO ASCEND TO OTHER SIDE, BECAUSE "
+        Logger() << "NO ASCEND TO OTHER SIDE, BECAUSE "
                   << (_ah.size() == pc.dim() ? "ALREADY DESCENDED IN HERE\n"
                                              : "NO D-1 CRITICAL POINT\n");
       }
     } else {
-      std::cout << "DESCEND GOT STOPPED by index " << stopper << std::endl;
+      Logger() << "DESCEND GOT STOPPED by index " << stopper << std::endl;
       assert(nn.second < 1.0);
       _location += nn.second * ray;
       _ah.add_point(stopper);  // TODO rename to append_point
       assert(lambda.size() >= _ah.size());
-      _ah.project(_location, lambda.head(_ah.size()));  // more than stopper can be < 0
+      // more than stopper can be < 0 -> we have to project
+      _ah.project(_location, lambda.head(_ah.size()));
       assert(lambda[_ah.size() - 1] < 0);  // stopper: < 0
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
@@ -172,10 +155,10 @@ public:
   }
   
 private:
-  ah_type       _ah;
-  eigen_vector  _location;
-  cp_type *     _succ;
-  size_type     _ignore_idx;
+  affine_hull<point_cloud_type>         _ah;
+  eigen_vector                    _location;
+  cp_type *                           _succ;
+  size_type                     _ignore_idx;
 };
 
 }  // namespace FC

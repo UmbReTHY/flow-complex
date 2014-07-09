@@ -2,7 +2,6 @@
 #define UPDATE_RAY_HPP_
 
 #include <Eigen/Core>
-#include <Eigen/QR>  // TODO remove
 
 #include "affine_hull.hpp"
 
@@ -23,19 +22,10 @@ void update_ray(affine_hull<PointCloud> const& ah,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & driver,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & ray) {
   using size_type = typename affine_hull<PointCloud>::size_type;
-  
   using eigen_matrix = Eigen::MatrixXd;
   using eigen_vector = Eigen::VectorXd;
-  auto const& pc = ah.pc();
-
-  eigen_matrix A(pc.dim(), ah.size() - 1);
-  for (size_type i = 1; i < ah.size(); ++i)
-    A.col(i - 1) = pc[*(ah.begin() + i)] - pc[*ah.begin()];
-  eigen_vector lambda2 = A.householderQr().solve(x - pc[*ah.begin()]);
-  std::cout << "fixed solution = " << lambda2.transpose() << std::endl;  
+  
   ah.project(x, lambda.head(ah.size()));
-  std::cout << "my solution = " << lambda.head(ah.size()).transpose() << std::endl;
-
   driver.setZero();
   auto m_it = ah.begin();
   for (size_type i = 0; i < ah.size(); ++i)

@@ -31,25 +31,57 @@ const eigen_align<false>::value = Eigen::Unaligned;
 //      descend tasks from infinity, after "spawned more-than-one-neg" ascend tasks
 template <typename _size_type>
 class circumsphere_ident {
-  public:
-    typedef _size_type size_type;
-    
-    template <class Iterator>
-    circumsphere_ident(Iterator begin, Iterator end) : _support(begin, end) {
-      std::sort(_support.begin(), _support.end());
-    }
-    
-    bool operator==(circumsphere_ident const& rhs) const {
-      return (_support.size() == rhs._support.size()) and
-             std::equal(_support.begin(), _support.end(), rhs._support.begin());
-    }
-    
-    bool operator!=(circumsphere_ident const& rhs) const {
-      return not operator==(rhs);
-    }
-    
-  private:
-    std::vector<_size_type> _support;
+using container_type = std::vector<_size_type>;
+public:
+  typedef _size_type                          size_type;
+  typedef typename container_type::const_iterator const_iterator;
+  
+  template <class Iterator>
+  circumsphere_ident(Iterator begin, Iterator end) : _support(begin, end) {
+    std::sort(_support.begin(), _support.end());
+  }
+  
+  bool operator==(circumsphere_ident const& rhs) const {
+    return (_support.size() == rhs._support.size()) and
+           std::equal(_support.begin(), _support.end(), rhs._support.begin());
+  }
+  
+  bool operator!=(circumsphere_ident const& rhs) const {
+    return not operator==(rhs);
+  }
+  
+  const_iterator cbegin() const {
+    return _support.cbegin();
+  }
+  
+  const_iterator cend() const {
+    return _support.cend();
+  }
+  
+private:
+  std::vector<_size_type> _support;
+};
+
+struct RangeHash {
+  template <class Iterator>
+  std::size_t operator()(Iterator begin, Iterator end) const {
+    assert(std::is_sorted(begin, end));
+    // the code below is boost's hash_range - thx boost
+    std::size_t seed = 0;
+    using size_type = typename base_t<decltype(*Iterator())>::type;
+    std::hash<size_type> _idx_hash;
+    while (begin != end)
+      seed ^= _idx_hash(*begin++) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    return seed;
+  }
+};
+
+struct CIHash {
+  template <typename size_type>
+  std::size_t operator()(circumsphere_ident<size_type> const& ci) const {
+    RangeHash range_hash;
+    return range_hash(ci.cbegin(), ci.cend());
+  }
 };
 
 }  // namespace FC
