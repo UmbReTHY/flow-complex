@@ -12,14 +12,16 @@
 
 #include <Eigen/Core>
 
+#include "affine_hull.hpp"
 #include "common.hpp"
 #include "critical_point.hpp"
 #include "descend_task.hpp"
-#include "affine_hull.hpp"
+#include "flow_complex.hpp"
 #include "nn_along_ray.hpp"
 #include "update_ray.hpp"
 #include "vertex_filter.hpp"
 #include "logger.hpp"
+#include "utility.hpp"
 
 namespace FC {
 
@@ -28,11 +30,13 @@ class descend_task;  // forward declaration
 
 template <typename point_cloud_t>
 class ascend_task {
+  using self_t = ascend_task<point_cloud_t>;
 public:
   typedef point_cloud_t                                 point_cloud_type;
   typedef typename point_cloud_type::number_type        number_type;
   typedef typename point_cloud_type::size_type          size_type;
   typedef Eigen::Matrix<number_type, Eigen::Dynamic, 1> eigen_vector;
+  typedef flow_complex<number_type, size_type>          fc_type;
 
   /**
     @brief use this constructor, to spawn an ascend_task at a random position
@@ -91,8 +95,9 @@ public:
   ascend_task & operator=(ascend_task const&) = delete;
   ascend_task & operator=(ascend_task &&) = delete;
   
-  template <class DTHandler, class ATHandler, class CPHandler>
-  void execute(DTHandler & dth, ATHandler & ath, CPHandler & cph) {
+  template <class DTHandler, class ATHandler, class CIHandler>
+  void execute(DTHandler & dth, ATHandler & ath, fc_type & fc,
+               CIHandler & cih) {
     auto const& pc = _ah.pc();
     // TODO the vectors can be allocated as thread local storage
     std::vector<size_type> nnvec(pc.dim() + 1);  // TODO dynarray
@@ -128,23 +133,21 @@ public:
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         assert(_ah.size() == pc.dim());
         Logger() << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
-        // TODO introduce proxy store: don't descend from the same proxy twice
-        // TODO find a cheaper way to get the inf-ptr
-        using cp_type = critical_point<number_type, size_type>;
-        auto * inf_ptr = cph(cp_type(pc.dim())).second;  // addr of cp at inf
+        auto const* inf_ptr = fc.max_at_inf();
         if (_dropped.first) {  // we dropped before flowing to infinity
           Logger() << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
           assert(pos_offsets.size() >= _ah.size());
           _ah.add_point(_dropped.second);  // append the dropped point
-          _ah.project(_location, lambda);
-          // TODO in case we came from an ascend with multiple negative indices
-          //      this ascend task has one or more twins, that might also flow to infinity
-          //      and consequently will spawn the exact same descend tasks: duplicate work
-          auto pos_end = get_pos_offsets(lambda, pos_offsets.begin());
-          spawn_sub_descends(dth, pos_offsets.begin(), pos_end,
-                             std::move(_location), std::move(_ah), inf_ptr);
-        }
+          using ci_type = circumsphere_ident<size_type>;
+          if (cih(ci_type(_ah.begin(), _ah.end()))) { // avoid same inf descends
+            _ah.project(_location, lambda);
+            auto pos_end = get_pos_offsets(lambda, pos_offsets.begin());
+            spawn_sub_descends(dth, pos_offsets.begin(), pos_end,
+                               std::move(_location), std::move(_ah), inf_ptr);
+          }
+        }  // the else case covers the incidence when we ascend from a d-1 facet
+           // in which case we don't need to descend back
         break;  // EXIT 1
       } else {
         Logger() << "STOPPER FOUND\n";
@@ -153,10 +156,8 @@ public:
           _ah.add_point(*it);
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
-          simplex_case_upflow(std::move(_ah), std::move(_location), lambda,
-                              std::move(_ray), driver,
-                                        nnvec.begin(), nnvec.end(),
-                              cph, ath, dth);
+          simplex_case_upflow(lambda, driver, nnvec.begin(), nnvec.end(),
+                              fc, ath, dth);
           break;  // EXIT 2
         } else {
           Logger() << "NOT MAX YET - NEED TO CLIMB\n";
@@ -190,7 +191,7 @@ private:
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
     std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
-    std::uniform_real_distribution<Float> rand_real;
+    std::uniform_real_distribution<Float> rand_real(0.5, 1.0);
     std::vector<size_type> sampled_indices;
     sampled_indices.reserve(pc.dim() + 1);
     auto already_sampled = [&sampled_indices] (size_type idx) {
@@ -199,7 +200,7 @@ private:
     };
     target.setZero();
     Float sum(0.0);
-    for (size_type i = 0; i < pc.dim() + size_type(1); ++i) {
+    for (size_type i = 0; i < (pc.dim() + size_type(1)); ++i) {
       size_type idx;
       do {
         idx = rand_idx(gen);
@@ -212,6 +213,64 @@ private:
       target += tmp * pc[idx];
     }
     target /= sum;
+  }
+  
+  /**
+    @brief Handles the case when, during an upflow task, we are at the center of
+           of the circumsphere of a full-dimensional-simplex.
+  */
+  template <class IdxIterator, class DTHandler, class ATHandler>
+  void simplex_case_upflow(eigen_vector & lambda,
+                           eigen_vector & driver,
+                           IdxIterator begin, IdxIterator end,
+                           fc_type & fc, ATHandler & ath, DTHandler & dth) {
+    auto & ah = _ah;
+    auto const& pc = ah.pc();
+    auto & x = _location;
+    auto & ray = _ray;
+    assert(ah.size() == (pc.dim() + 1));
+    assert(std::distance(begin, end) >= pc.dim() + 1);
+    // TODO static_assert: type of IdxIterator == size_type
+    Logger() << "FINITE MAX SUSPECT\n";
+    assert(lambda.size() == ah.size());
+    ah.project(x, lambda);
+    Logger() << "lambda = " << lambda.head(ah.size()).transpose() << std::endl;
+    auto const neg_end = get_neg_offsets(lambda, begin);
+    if (begin == neg_end) {  // no points negative
+      Logger() << "FINITE MAX INDEED\n"
+               << "MAX-LOC " << x.transpose() << std::endl;
+      number_type sq_dist((x - pc[*ah.begin()]).squaredNorm());
+      using cp_type = typename fc_type::cp_type;
+      auto r_pair = fc.insert(cp_type(ah.begin(), ah.end(), sq_dist));
+      if (r_pair.first) {  // only spawn descends for new maxima
+        auto max_ptr = r_pair.second;
+        // we know/assume the point added last is the one in last position
+        // within affine hull: so we don't make (begin + dim() + 1) the end
+        // of pos coeffs since we don't want to descend back to where we came from
+        // TODO because of this, we don't get all the incidences right:
+        //      this max_ptr is (possibly) the succ of a cp we found from d-1 cp
+        //      or a descend_task of such a d-1 facet
+        auto pos_end = std::next(begin, pc.dim() + 1);
+        std::iota(begin, pos_end, 0);
+        spawn_sub_descends(dth, begin, pos_end, std::move(x), std::move(ah),
+                           max_ptr);
+      }
+    } else {
+      Logger() << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
+      size_type dropped_idx;  // TODO get rid of this temporary
+      // TODO move the last iteration rather than copying it
+      for (auto it = begin; it != neg_end; ++it) {
+        auto new_ah(ah);
+        dropped_idx = *(ah.begin() + *it);
+        new_ah.drop_point(new_ah.begin() + *it);
+        update_ray<RAY_DIR::FROM_DRIVER>(new_ah, x, lambda, driver, ray);
+        using ev = eigen_vector;
+        using at = self_t;
+        Logger() << "NEW TASK: " << new_ah << std::endl
+                 << "DROPPED IDX = " << dropped_idx << std::endl;
+        ath(at(std::move(new_ah), ev(x), ev(ray), dropped_idx));
+      }
+    }
   }
 
   affine_hull<point_cloud_type> _ah;

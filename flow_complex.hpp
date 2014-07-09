@@ -29,7 +29,7 @@ class flow_complex {
       @brief initializes the flow complex with a maximum at infinity
     */
     flow_complex(size_type dim) {
-      _cps.insert(cp_type(dim));
+      _max_at_inf = &*_cps.insert(cp_type(dim)).first;
     }
     // copy- and move-constructor
     flow_complex(flow_complex const&) = default;
@@ -77,8 +77,13 @@ class flow_complex {
       return r;
     }
     
-  private:  
-    cp_container _cps;
+    cp_type const* max_at_inf() const {
+      return _max_at_inf;
+    }
+    
+  private:
+    cp_type *    _max_at_inf;
+    cp_container        _cps;
 };
 
 }  // namespace FC

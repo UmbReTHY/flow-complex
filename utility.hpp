@@ -27,8 +27,6 @@ const eigen_align<true>::value = Eigen::Aligned;
 template <> typename eigen_align<false>::eigen_align_t
 const eigen_align<false>::value = Eigen::Unaligned;
 
-// TODO make succ for descend tasks part of the ident. This avoids duplicate
-//      descend tasks from infinity, after "spawned more-than-one-neg" ascend tasks
 template <typename _size_type>
 class circumsphere_ident {
 using container_type = std::vector<_size_type>;
@@ -42,8 +40,8 @@ public:
   }
   
   bool operator==(circumsphere_ident const& rhs) const {
-    return (_support.size() == rhs._support.size()) and
-           std::equal(_support.begin(), _support.end(), rhs._support.begin());
+    assert(_support.size() == rhs._support.size());
+    return std::equal(_support.begin(), _support.end(), rhs._support.begin());
   }
   
   bool operator!=(circumsphere_ident const& rhs) const {

@@ -149,6 +149,7 @@ public:
     RadiusSearchResultSet<Iterator> result(indices_begin, squared_radius);
     using SearchParams = nanoflann::SearchParams;
     _kd_tree->findNeighbors(result, &q[0], SearchParams(32, 0, false));
+        
     return result.end();
   }
 

@@ -23,7 +23,7 @@ int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
   
-  size_type const NUM_PTS  =  100;
+  size_type const NUM_PTS  =  500;
   size_type const DIM      =    3;
   size_type const NUM_RUNS =    1;
 
@@ -63,8 +63,10 @@ int main(int, char**) {
           ++r_pair.first->second;
       }
     int sum = 0;
-    for (auto const& el : hist)
+    for (auto const& el : hist) {
+      std::cout << "index " << el.first << " : " << el.second << std::endl;
       sum += (0 == (el.first % 2) ? el.second : -el.second);
+    }
     if (1 != sum) {
       std::cout << "HIST-SUM = " << sum << std::endl;
       std::exit(EXIT_FAILURE);

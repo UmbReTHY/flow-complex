@@ -35,7 +35,7 @@ public:
 
   descend_task(affine_hull<point_cloud_type> ah,
                eigen_vector && location,
-               critical_point<number_type, size_type> * succ,
+               critical_point<number_type, size_type> const* succ,
                size_type ignore_idx)
     : _ah(std::move(ah)), _location(), _succ(succ), _ignore_idx(ignore_idx) {
     Logger() << "****DT-CONSTRUCTOR-BEGIN*****\n"
@@ -157,7 +157,7 @@ public:
 private:
   affine_hull<point_cloud_type>         _ah;
   eigen_vector                    _location;
-  cp_type *                           _succ;
+  cp_type const*                      _succ;
   size_type                     _ignore_idx;
 };
 

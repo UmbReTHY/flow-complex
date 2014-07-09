@@ -48,18 +48,18 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   }
   std::stack<at_type>  qa;
   std::stack<dt_type>  qd;
-//  std::vector<ci_type> aci;
-  tbb::concurrent_unordered_set<ci_type, CIHash> dci;
+  using ci_container = tbb::concurrent_unordered_set<ci_type, CIHash>;
+  ci_container infproxy_cont;
+  ci_container dci;
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
   auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};  // TODO to safe one CTOR call: 
                                                                         //      emplace insert
-  auto cih = [] (tbb::concurrent_unordered_set<ci_type, CIHash> & ci_store,
-                 ci_type ci) {
+  auto cih = [] (ci_container & ci_store, ci_type ci) {
     return ci_store.insert(ci).second;
   };
-//  auto acih = std::bind(cih, std::ref(aci), std::placeholders::_1);
+  auto acih = std::bind(cih, std::ref(infproxy_cont), std::placeholders::_1);
   auto dcih = std::bind(cih, std::ref(dci), std::placeholders::_1);
   
   // 3) seed initial ascend task(s)
@@ -69,7 +69,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     if (not qa.empty()) {
       at_type at(std::move(qa.top()));  // TODO code duplication: write "process task" function
       qa.pop();
-      at.execute(dth, ath, cph);
+      at.execute(dth, ath, fc, acih);
     } else {
       dt_type dt(std::move(qd.top()));
       qd.pop();  // TODO: these two steps above have to be atomic
