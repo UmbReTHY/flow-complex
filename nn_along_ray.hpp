@@ -38,7 +38,6 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
   auto r = std::make_pair(begin, number_type(0));
   typename VertexFilter::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
-  number_type const TOL(1e-12);  // TODO check validity for this tolerance
   while (q_ptr) {
     auto & q = *q_ptr;
     number_type const tmp = (v_p - q.dot(v));
@@ -46,7 +45,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
       throw std::logic_error("division by 0");
     number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
     Logger() << "t = " << t << " for id = " << q_idx << std::endl;
-    if (t > (TOL) and (r.first == begin or t <= r.second)) {
+    if (t > 0 and (r.first == begin or t <= r.second)) {
       Logger() << "t-DIFF = " << (t - r.second) << std::endl;
       if (r.first != begin and t == r.second) {
         if (r.first == end)
