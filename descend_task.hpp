@@ -66,9 +66,7 @@ public:
     // TODO the vectors below would all qualify for thread local storage
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
-    std::vector<size_type> idx_store(pc.dim() + 1);
-    // TODO maybe collaps with idx_store
-    std::vector<size_type> bigger_store(pc.size());
+    std::vector<size_type> idx_store(pc.size());
     eigen_vector ray;
     update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
     
@@ -79,7 +77,7 @@ public:
     size_type stopper;  // dts asumme at most 1 stopper: non-degenerate case!
     auto nn = std::make_pair(&stopper, number_type(0));
     try {
-      auto vf = make_vertex_filter(_ah, driver, _ignore_idx, bigger_store.begin());
+      auto vf = make_dt_filter(_ah, driver, _ignore_idx, idx_store.begin());
       nn = nearest_neighbor_along_ray(_location, ray, pc[*_ah.begin()], vf,
                                       &stopper, std::next(&stopper));
     } catch(std::exception & e) {
@@ -125,7 +123,7 @@ public:
       if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {
         Logger() << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
         using at = ascend_task<point_cloud_type>;
-        auto const& t = nn.second;
+        Logger() << "t = " << nn.second << std::endl;
         assert(nn.first == &stopper);  // there is no stopper -> radius search
         ath(at(std::move(_ah), std::move(driver), std::move(ray)));
         // TODO this case has changed, especially when the subsequend at flows to inf
