@@ -10,6 +10,7 @@
 #include "affine_hull.hpp"
 #include "common.hpp"
 #include "critical_point.hpp"
+#include <flow_complex.hpp>
 #include "update_ray.hpp"
 #include "utility.hpp"
 #include "vertex_filter.hpp"
@@ -59,8 +60,8 @@ public:
   descend_task(descend_task const&) = delete;
   descend_task & operator=(descend_task const&) = delete;
   
-  template <class DTHandler, class ATHandler, class CPHandler, class CIHandler>
-  void execute(DTHandler & dth, ATHandler & ath, CPHandler & cph,
+  template <class DTHandler, class ATHandler, class CIHandler, class... Params>
+  void execute(DTHandler & dth, ATHandler & ath, flow_complex<Params...> & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     // TODO the vectors below would all qualify for thread local storage
@@ -95,8 +96,8 @@ public:
         Logger() << "WITHIN CONVEX HULL\n";
         Logger() << "LOC = " << x.transpose() << std::endl;
         number_type const sq_dist = (x - _ah.pc()[*_ah.begin()]).squaredNorm();
-        auto const insert_pair =  cph(cp_type(_ah.begin(), _ah.end(), sq_dist,
-                                      _succ));
+        cp_type new_cp(_ah.begin(), _ah.end(), sq_dist, _succ);
+        auto const insert_pair =  fc.insert(std::move(new_cp));
         if (insert_pair.first) {
           auto * new_succ = insert_pair.second;
           if (new_succ->index() > 1) {

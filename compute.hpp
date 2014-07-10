@@ -48,8 +48,6 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
-  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};
-
   auto cih = [] (ci_container & ci_store, ci_type ci) {
     return ci_store.insert(ci).second;
   };
@@ -67,7 +65,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     } else {
       dt_type dt(std::move(qd.top()));
       qd.pop();  // TODO: these two steps above have to be atomic
-      dt.execute(dth, ath, cph, dcih);
+      dt.execute(dth, ath, fc, dcih);
     }
   }
   
