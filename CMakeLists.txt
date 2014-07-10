@@ -27,7 +27,7 @@ option(BUILD_TESTS
        "builds the tests and provide a test target for Makefiles"
        OFF)
 
-option(BUILD_EXAMPLES "" OFF)
+option(BUILD_EXAMPLES "" ON)
 
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
