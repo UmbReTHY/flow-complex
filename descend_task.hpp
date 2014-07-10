@@ -64,10 +64,10 @@ public:
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     // TODO the vectors below would all qualify for thread local storage
-    eigen_vector driver(pc.dim());
-    eigen_vector lambda(pc.dim() + 1);
-    std::vector<size_type> idx_store(pc.size());
-    eigen_vector ray;
+    thread_local eigen_vector driver(pc.dim());
+    thread_local eigen_vector lambda(pc.dim() + 1);
+    thread_local std::vector<size_type> idx_store(pc.size());
+    thread_local eigen_vector ray;
     update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
     
     Logger() << "DESCEND-TASK STARTS: address = " << this << std::endl
@@ -125,7 +125,7 @@ public:
         using at = ascend_task<point_cloud_type>;
         Logger() << "t = " << nn.second << std::endl;
         assert(nn.first == &stopper);  // there is no stopper -> radius search
-        ath(at(std::move(_ah), std::move(driver), std::move(ray)));
+        ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
         // TODO this case has changed, especially when the subsequend at flows to inf
         // TODO introduce vector of succs -> for alle spawn_sub_descends
         //      we just have to update this tasks succ vector

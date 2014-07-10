@@ -100,10 +100,10 @@ public:
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     // TODO the vectors can be allocated as thread local storage
-    std::vector<size_type> nnvec(pc.dim() + 1);
-    std::vector<size_type> idx_store(pc.size());
-    eigen_vector driver(pc.dim());
-    eigen_vector lambda(pc.dim() + 1);
+    thread_local std::vector<size_type> nnvec(pc.dim() + 1);
+    thread_local std::vector<size_type> idx_store(pc.size());
+    thread_local eigen_vector driver(pc.dim());
+    thread_local eigen_vector lambda(pc.dim() + 1);
     // there's only 2 cases of ascend tasks: completely new, and those starting
     // with d points on the boundary. The first case has not dropped yet, the
     // 2nd case has always dropped before
