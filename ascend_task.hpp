@@ -100,7 +100,8 @@ public:
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     // TODO the vectors can be allocated as thread local storage
-    std::vector<size_type> nnvec(pc.dim() + 1);  // TODO dynarray
+    std::vector<size_type> nnvec(pc.dim() + 1);
+    std::vector<size_type> idx_store(pc.size());
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
     // there's only 2 cases of ascend tasks: completely new, and those starting
@@ -110,9 +111,9 @@ public:
     auto *const dropped_begin = &_dropped.second;
     auto * dropped_end = (_dropped.first ? std::next(dropped_begin)
                                          : dropped_begin);
-    // TODO vertex filter in descend task takes a single index at max too
-    //      -> instead of giving a range, give a single pointer instead
-    auto vf = make_vertex_filter(_ah, dropped_begin, dropped_end);
+    auto vf = make_at_filter(_ah, _ray,
+                             (_dropped.first ? _dropped.second : *_ah.begin()),
+                             idx_store.begin());
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     
     Logger() << "ASCEND-TASK-STARTS\n";
@@ -167,8 +168,8 @@ public:
         }
       }
       assert(dropped_begin == dropped_end);
-      vf.reset(dropped_end);  // make the vertex filter consider all points
-                              // of the point cloud again on subsequent calls
+      // make vf consider all ambient points again on subsequent calls
+      vf.reset(_ray, _ah, idx_store.begin());
     } while(true);
     Logger() << "***AT-COMPLETE***\n";
   }
