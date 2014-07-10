@@ -28,8 +28,12 @@ class flow_complex {
     /**
       @brief initializes the flow complex with a maximum at infinity
     */
-    flow_complex(size_type dim) {
+    flow_complex(size_type dim, size_type num_pts)
+    : _minima(num_pts, nullptr) {
       _max_at_inf = &*_cps.insert(cp_type(dim)).first;
+      // init fc with id-0 critical points
+      for (size_type i = 0; i < num_pts; ++i)
+        _minima[i] = insert(cp_type(&i, &i + 1, 0)).second;
     }
     // copy- and move-constructor
     flow_complex(flow_complex const&) = default;
@@ -81,9 +85,14 @@ class flow_complex {
       return _max_at_inf;
     }
     
+    cp_type * minimum(size_type pos) const {
+      return _minima[pos];
+    }
+    
   private:
-    cp_type *    _max_at_inf;
-    cp_container        _cps;
+    cp_type *              _max_at_inf;
+    cp_container                  _cps;
+    std::vector<cp_type *>     _minima;
 };
 
 }  // namespace FC

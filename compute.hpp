@@ -39,13 +39,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
 
   // 1) init data structures
   pc_type pc(begin, end, dim);
-  fc_type fc(dim);
-  {  // init fc with id-0 critical points
-    std::vector<size_type> indices(pc.size());
-    std::iota(indices.begin(), indices.end(), 0);
-    for (auto it = indices.cbegin(); it != indices.cend(); ++it)
-      fc.insert(cp_type(it, it + 1, 0));
-  }
+  fc_type fc(dim, pc.size());
   std::stack<at_type>  qa;
   std::stack<dt_type>  qd;
   using ci_container = tbb::concurrent_unordered_set<ci_type, CIHash>;
@@ -54,8 +48,8 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   // 2) create the handlers for task communication
   auto ath = [&qa] (at_type && at) {qa.push(std::move(at));};
   auto dth = [&qd] (dt_type && dt) {qd.push(std::move(dt));};
-  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};  // TODO to safe one CTOR call: 
-                                                                        //      emplace insert
+  auto cph = [&fc] (cp_type && cp) {return fc.insert(std::move(cp));};
+
   auto cih = [] (ci_container & ci_store, ci_type ci) {
     return ci_store.insert(ci).second;
   };
