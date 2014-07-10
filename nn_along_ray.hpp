@@ -21,12 +21,12 @@ namespace FC {
                     the given range, an exception is thrown.
 */
 template <class Derived1, class Derived2, class Derived3, class NNIterator,
-          class VertexFilter>
+          class... Params>
 std::pair<NNIterator, typename Derived1::Scalar>
 nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
                            Eigen::MatrixBase<Derived2> const& v,
                            Eigen::MatrixBase<Derived3> const& p,
-                           VertexFilter & get_next,
+                           vertex_filter<Params...> & get_next,
                            NNIterator begin, NNIterator end) {
   Logger() << "NORM OF RAY " << v.squaredNorm() << std::endl;
   using number_type = typename Derived1::Scalar;
@@ -36,7 +36,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
   number_type const v_p = v.dot(p);
   // init return value
   auto r = std::make_pair(begin, number_type(0));
-  typename VertexFilter::size_type q_idx;
+  typename vertex_filter<Params...>::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
   while (q_ptr) {
     auto & q = *q_ptr;
