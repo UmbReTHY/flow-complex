@@ -112,9 +112,8 @@ make_at_filter(affine_hull<PointCloud> const& ah,
                typename PointCloud::size_type ignore_idx,
                Iterator result_begin) {
   using vf_type = vertex_filter<PointCloud, Iterator>;
-  return vertex_filter<PointCloud, Iterator>(ah.pc(), ah.pc()[*ah.begin()], ray,
-                                             ah.begin(), ah.end(), ignore_idx,
-                                             result_begin);
+  return vf_type(ah.pc(), ah.pc()[*ah.begin()], ray,
+                 ah.begin(), ah.end(), ignore_idx, result_begin);
 }
 
 template <class PointCloud, class Iterator, class Derived>

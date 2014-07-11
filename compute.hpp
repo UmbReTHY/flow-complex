@@ -31,7 +31,6 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   Logger() << "*****************COMPUTE-START*************************\n";
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
-  using cp_type = typename fc_type::cp_type;
   using pc_type = point_cloud<number_type, size_type, Aligned>;
   using at_type = ascend_task<pc_type>;
   using dt_type = descend_task<pc_type>;

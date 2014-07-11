@@ -22,8 +22,6 @@ void update_ray(affine_hull<PointCloud> const& ah,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & driver,
                 Eigen::Matrix<Float, Eigen::Dynamic, 1> & ray) {
   using size_type = typename affine_hull<PointCloud>::size_type;
-  using eigen_matrix = Eigen::MatrixXd;
-  using eigen_vector = Eigen::VectorXd;
   
   ah.project(x, lambda.head(ah.size()));
   driver.setZero();
