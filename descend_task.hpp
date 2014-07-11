@@ -29,6 +29,7 @@ public:
   typedef point_cloud_t                          point_cloud_type;
   typedef typename point_cloud_type::number_type number_type;
   typedef typename point_cloud_type::size_type   size_type;
+  typedef flow_complex<number_type, size_type>   fc_type;
 private:
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
   using cp_type = critical_point<number_type, size_type>;
@@ -60,8 +61,8 @@ public:
   descend_task(descend_task const&) = delete;
   descend_task & operator=(descend_task const&) = delete;
   
-  template <class DTHandler, class ATHandler, class CIHandler, class... Params>
-  void execute(DTHandler & dth, ATHandler & ath, flow_complex<Params...> & fc,
+  template <class DTHandler, class ATHandler, class CIHandler>
+  void execute(DTHandler & dth, ATHandler & ath, fc_type & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     thread_local eigen_vector driver(pc.dim());
@@ -103,7 +104,7 @@ public:
             // TODO for _ah.size() != pc.dim(), we can move the arguments
             std::iota(pos_offsets.begin(),
                       std::next(pos_offsets.begin(), _ah.size()), 0);
-            spawn_sub_descends(dth, pos_offsets.begin(),
+            spawn_sub_descends(dth, fc, pos_offsets.begin(),
                                std::next(pos_offsets.begin(), _ah.size()),
                                eigen_vector(x), _ah, new_succ);
           } else {
@@ -115,7 +116,7 @@ public:
       } else {
         Logger() << "ONLY AFFINE HULL\n";
         // TODO move _ah and x if the ASCEND branch below won't be executed
-        spawn_sub_descends(dth, pos_offsets.begin(), pos_end,
+        spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                            eigen_vector(x), _ah, _succ);
       }
       // handles both the critical and non-critical case
@@ -147,7 +148,7 @@ public:
       assert(lambda[_ah.size() - 1] < 0);  // stopper: < 0
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
-      spawn_sub_descends(dth, pos_offsets.begin(), pos_end,
+      spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                          std::move(_location), std::move(_ah), _succ);
     }
   }

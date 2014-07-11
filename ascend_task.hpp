@@ -143,7 +143,7 @@ public:
           if (cih(ci_type(_ah.begin(), _ah.end()))) { // avoid same inf descends
             _ah.project(_location, lambda);
             auto pos_end = get_pos_offsets(lambda, pos_offsets.begin());
-            spawn_sub_descends(dth, pos_offsets.begin(), pos_end,
+            spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                                std::move(_location), std::move(_ah), inf_ptr);
           }
         }  // the else case covers the incidence when we ascend from a d-1 facet
@@ -252,7 +252,7 @@ private:
         //      or a descend_task of such a d-1 facet
         auto pos_end = std::next(begin, pc.dim() + 1);
         std::iota(begin, pos_end, 0);
-        spawn_sub_descends(dth, begin, pos_end, std::move(x), std::move(ah),
+        spawn_sub_descends(dth, fc, begin, pos_end, std::move(x), std::move(ah),
                            max_ptr);
       }
     } else {

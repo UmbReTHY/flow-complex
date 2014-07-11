@@ -14,6 +14,7 @@
 #include "ascend_task.hpp"
 #include "critical_point.hpp"
 #include "descend_task.hpp"
+#include "flow_complex.hpp"
 #include "logger.hpp"
 #include "update_ray.hpp"
 
@@ -58,29 +59,36 @@ Iterator get_neg_offsets(Eigen::MatrixBase<Derived> const& lambda,
 template <class DTHandler, class PointCloud, typename number_type,
           typename size_type, class Iterator>
 void spawn_sub_descends(DTHandler & dth,
+                        flow_complex<number_type, size_type> const& fc,
                         Iterator drop_pos_begin, Iterator drop_pos_end,
                         Eigen::Matrix<number_type, Eigen::Dynamic, 1> && x,
                         affine_hull<PointCloud> ah,
                         critical_point<number_type, size_type> const* succ) {
-  // TODO maybe check before every descend if the cp exists already. If so
-  //      the descend would be successful and does not need to be scheduled
-  //      Instead, just a (possibly) new successor needs to be added.
   using dt = descend_task<PointCloud>;
+  using fc_type = flow_complex<number_type, size_type>;
+  using cp_type = typename fc_type::cp_type;
   // we skip the first position to use it as the "move-case" after the loop
   assert(drop_pos_begin != drop_pos_end);
-  for (Iterator it = std::next(drop_pos_begin); it != drop_pos_end; ++it) {
+  cp_type * existing_cp = nullptr;
+  // TODO one iteration could be moved, instead of copied
+  for (Iterator it = /*std::next(*/drop_pos_begin/*)*/; it != drop_pos_end; ++it) {
     auto new_ah(ah);
     new_ah.drop_point(new_ah.begin() + *it);
-    auto const& dropped_idx = *(ah.begin() + *it);
-    Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
-    using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-    dth(dt(std::move(new_ah), eigen_vector(x), succ, dropped_idx));
+    if ((existing_cp = fc.find(cp_type(new_ah.begin(), new_ah.end(), 0)))) {
+      Logger() << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
+      // TODO update successors
+    } else {
+      auto const& dropped_idx = *(ah.begin() + *it);
+      Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
+      using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
+      dth(dt(std::move(new_ah), eigen_vector(x), succ, dropped_idx));
+    }
   }
-  assert(drop_pos_begin != drop_pos_end);
-  size_type dropped_idx = *(ah.begin() + *drop_pos_begin);
-  Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
-  ah.drop_point(ah.begin() + *drop_pos_begin);
-  dth(dt(std::move(ah), std::move(x), succ, dropped_idx));
+//  assert(drop_pos_begin != drop_pos_end);
+//  size_type dropped_idx = *(ah.begin() + *drop_pos_begin);
+//  Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
+//  ah.drop_point(ah.begin() + *drop_pos_begin);
+//  dth(dt(std::move(ah), std::move(x), succ, dropped_idx));
 }
 
 }  // namespace FC
