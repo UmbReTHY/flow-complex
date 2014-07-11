@@ -54,7 +54,7 @@ public:
   affine_hull & operator=(affine_hull &&) = delete;
   affine_hull & operator=(affine_hull const&) = delete;
   
-  void add_point(size_type const idx) {
+  void append_point(size_type const idx) {
     assert(not is_member(std::find(_members.begin(), _members.end(), idx)));
     assert(size() <= _pc.dim());
     // it requires an idx that serves as the origin for adding a column

@@ -51,7 +51,7 @@ public:
       nn = pc.nearest_neighbor(_location);
     } while (std::get<2>(nn));
     // add the nearest neighbor
-    _ah.add_point(std::get<0>(nn));
+    _ah.append_point(std::get<0>(nn));
     // set the ray
     _ray = _location - pc[*_ah.begin()];
   }
@@ -99,7 +99,6 @@ public:
   void execute(DTHandler & dth, ATHandler & ath, fc_type & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
-    // TODO the vectors can be allocated as thread local storage
     thread_local std::vector<size_type> nnvec(pc.dim() + 1);
     thread_local std::vector<size_type> idx_store(pc.size());
     thread_local eigen_vector driver(pc.dim());
@@ -139,7 +138,7 @@ public:
           Logger() << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
           assert(pos_offsets.size() >= _ah.size());
-          _ah.add_point(_dropped.second);  // append the dropped point
+          _ah.append_point(_dropped.second);  // append the dropped point
           using ci_type = circumsphere_ident<size_type>;
           if (cih(ci_type(_ah.begin(), _ah.end()))) { // avoid same inf descends
             _ah.project(_location, lambda);
@@ -154,7 +153,7 @@ public:
         Logger() << "STOPPER FOUND\n";
         _location += nn.second * _ray;
         for (auto it = nnvec.begin(); it != nn.first; ++it)
-          _ah.add_point(*it);
+          _ah.append_point(*it);
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
           simplex_case_upflow(lambda, driver, nnvec.begin(), nnvec.end(),

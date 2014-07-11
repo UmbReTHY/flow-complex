@@ -64,13 +64,12 @@ public:
   void execute(DTHandler & dth, ATHandler & ath, flow_complex<Params...> & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
-    // TODO the vectors below would all qualify for thread local storage
     thread_local eigen_vector driver(pc.dim());
     thread_local eigen_vector lambda(pc.dim() + 1);
     thread_local std::vector<size_type> idx_store(pc.size());
     thread_local eigen_vector ray;
+
     update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
-    
     Logger() << "DESCEND-TASK STARTS: address = " << this << std::endl
              << _ah << std::endl
              << "LOCATION: " << _location.transpose() << std::endl
@@ -141,7 +140,7 @@ public:
       Logger() << "DESCEND GOT STOPPED by index " << stopper << std::endl;
       assert(nn.second < 1.0);
       _location += nn.second * ray;
-      _ah.add_point(stopper);  // TODO rename to append_point
+      _ah.append_point(stopper);
       assert(lambda.size() >= _ah.size());
       // more than stopper can be < 0 -> we have to project
       _ah.project(_location, lambda.head(_ah.size()));
