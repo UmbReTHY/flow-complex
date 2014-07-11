@@ -89,6 +89,11 @@ class flow_complex {
       return _minima[pos];
     }
     
+    cp_type * find(cp_type const& cp) const {
+      auto it = _cps.find(cp);
+      return (it == _cps.end() ? nullptr : &*it);
+    }
+    
   private:
     cp_type *              _max_at_inf;
     cp_container                  _cps;
