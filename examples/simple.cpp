@@ -8,6 +8,8 @@
 #include <iostream>
 #include <map>
 
+#define EIGEN_DONT_VECTORIZE
+
 // 3rd-party library headers
 #include <Eigen/Core>
 
@@ -23,9 +25,9 @@ int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
   
-  size_type const NUM_PTS  =  500;
-  size_type const DIM      =    3;
-  size_type const NUM_RUNS =    1;
+  size_type constexpr NUM_PTS  = 1000;
+  size_type constexpr DIM      =    3;
+  size_type constexpr NUM_RUNS =    1;
 
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
 
