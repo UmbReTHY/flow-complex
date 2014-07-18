@@ -41,7 +41,8 @@ public:
   
   bool operator==(circumsphere_ident const& rhs) const {
     assert(_support.size() == rhs._support.size());
-    return std::equal(_support.begin(), _support.end(), rhs._support.begin());
+    return (_support.size() == rhs._support.size()) and
+           std::equal(_support.begin(), _support.end(), rhs._support.begin());
   }
   
   bool operator!=(circumsphere_ident const& rhs) const {

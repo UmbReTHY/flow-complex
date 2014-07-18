@@ -90,13 +90,23 @@ public:
   ~ascend_task() {
     Logger() << "***AT-DESTRUCT: " << this << std::endl;
   }
+
+  ascend_task & operator=(ascend_task && tmp) {
+    Logger() << "***AT-MOVE-ASSIGN: " << this << std::endl;
+    if (this != &tmp) {
+      _ah = std::move(tmp._ah);
+      _location.swap(tmp._location);
+      _ray.swap(tmp._ray);
+      _dropped = tmp._dropped;
+    }
+    return *this;
+  }
   
   ascend_task (ascend_task const&) = delete;
   ascend_task & operator=(ascend_task const&) = delete;
-  ascend_task & operator=(ascend_task &&) = delete;
   
   template <class DTHandler, class ATHandler, class CIHandler>
-  void execute(DTHandler & dth, ATHandler & ath, fc_type & fc,
+  void execute(ATHandler & ath, DTHandler & dth, fc_type & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     thread_local std::vector<size_type> nnvec(pc.dim() + 1);
@@ -107,9 +117,6 @@ public:
     // with d points on the boundary. The first case has not dropped yet, the
     // 2nd case has always dropped before
     assert(_ah.size() == 1 or _ah.size() == pc.dim());
-    auto *const dropped_begin = &_dropped.second;
-    auto * dropped_end = (_dropped.first ? std::next(dropped_begin)
-                                         : dropped_begin);
     auto vf = make_at_filter(_ah, _ray,
                              (_dropped.first ? _dropped.second : *_ah.begin()),
                              idx_store.begin());
@@ -163,10 +170,8 @@ public:
           Logger() << "NOT MAX YET - NEED TO CLIMB\n";
           update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
                                            driver, _ray);
-          dropped_end = dropped_begin;
         }
       }
-      assert(dropped_begin == dropped_end);
       // make vf consider all ambient points again on subsequent calls
       vf.reset(_ray, _ah, idx_store.begin());
     } while(true);
@@ -185,8 +190,8 @@ private:
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
-//    std::random_device rd;
-    int seed = 0;//rd();
+    std::random_device rd;
+    int seed = rd();
     Logger() << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]

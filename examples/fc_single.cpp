@@ -6,7 +6,7 @@
 // C++ headers
 #include <array>
 #include <iostream>
-#include <map>
+#include <chrono>
 
 #define EIGEN_DONT_VECTORIZE
 
@@ -25,9 +25,9 @@ int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
   
-  size_type constexpr NUM_PTS  = 1000;
-  size_type constexpr DIM      =    3;
-  size_type constexpr NUM_RUNS =    1;
+  size_type constexpr NUM_PTS  =  120;
+  size_type constexpr DIM      =    4;
+  size_type constexpr NUM_RUNS =   10;
 
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
 
@@ -43,6 +43,7 @@ int main(int, char**) {
     }
   }
 
+  float time_sum = 0;
   for (size_type i = 0; i < NUM_RUNS; ++i) {
     unsigned int eigen_seed = 1568751282;// std::time(nullptr);
     FC::Logger() << "eigen_seed = " << eigen_seed << std::endl;
@@ -54,26 +55,22 @@ int main(int, char**) {
       FC::Logger() << point_storage[i].transpose() << std::endl;
     }
     
+    using sysclock = std::chrono::system_clock;
+    using time_pt = sysclock::time_point;
+    time_pt start = sysclock::now();
     auto fc = FC::compute_flow_complex<size_type, true>
-              (points.cbegin(), points.cend(), DIM, /* nr of threads */ 8);
-    // TODO write dedicated validate function
-    std::map<size_type, int> hist;
-    for (auto const& cp : fc)
-      if (not cp.is_max_at_inf()) {
-        auto r_pair = hist.emplace(cp.index(), 1);
-        if (not r_pair.second)
-          ++r_pair.first->second;
-      }
-    int sum = 0;
-    for (auto const& el : hist) {
-      std::cout << "index " << el.first << " : " << el.second << std::endl;
-      sum += (0 == (el.first % 2) ? el.second : -el.second);
-    }
-    if (1 != sum) {
-      std::cout << "HIST-SUM = " << sum << std::endl;
+             (points.cbegin(), points.cend(), DIM, 1);
+    time_pt end = sysclock::now();
+    using namespace std::chrono;
+    time_sum += duration_cast<milliseconds>(end - start).count();
+
+    if (not FC::validate(fc)) {
+      std::cerr << "flow complex validation failed\n";
       std::exit(EXIT_FAILURE);
     }
   }
+  std::cout << "single thread time : " << (time_sum / NUM_RUNS) << "ms\n";
+  
   std::cout << NUM_RUNS << " RUNS SUCCESSFULLY COMPLETED\n";
   std::exit(EXIT_SUCCESS);
 }

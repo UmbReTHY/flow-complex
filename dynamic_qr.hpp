@@ -78,9 +78,23 @@ public:
     tmp._r_raw = nullptr;
     tmp._r_begin = nullptr;
   }
+  
+  // move-assignment
+  dynamic_qr & operator=(dynamic_qr && tmp) {
+    Logger() << "**QR-MOVE-ASSIGN " << this << std::endl;
+    if (this != &tmp) {
+      _q.swap(tmp._q);
+      _r_raw = tmp._r_raw;
+      _r_begin = tmp._r_begin;
+      _r_end = tmp._r_end;
+      // ownership has been transferred
+      tmp._r_raw = nullptr;
+      tmp._r_begin = nullptr;
+    }
+    return *this;
+  }
 
   dynamic_qr & operator=(dynamic_qr const&) = delete;
-  dynamic_qr & operator=(dynamic_qr &&) = delete;
   
   size_type num_rows() const noexcept {
     assert(_q.rows() >= 0);

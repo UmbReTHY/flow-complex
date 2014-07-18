@@ -51,7 +51,13 @@ public:
     Logger() << "**AH-DESTRUCT " << this << std::endl;
   }
 
-  affine_hull & operator=(affine_hull &&) = delete;
+  affine_hull & operator=(affine_hull && tmp) {
+    if (this != &tmp) {
+     _dyn_qr = std::move(tmp._dyn_qr);
+     _members = std::move(tmp._members);
+    }
+    return *this;
+  }
   affine_hull & operator=(affine_hull const&) = delete;
   
   void append_point(size_type const idx) {
@@ -130,7 +136,7 @@ private:
   }
 
   dynamic_qr<number_type> _dyn_qr;
-  member_container _members;  // TODO write own dynarray class, to save the capacity pointer
+  member_container _members;
   point_cloud_type const& _pc;
 };
 

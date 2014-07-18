@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <map>
 
 #include <tbb/concurrent_unordered_set.h>
 
@@ -43,21 +44,21 @@ class flow_complex {
     flow_complex & operator=(flow_complex &&) = default;
   
     // iterators
-    iterator begin() noexcept {
+    iterator begin() {
       return _cps.begin();
     }
     
-    iterator end() noexcept {
+    iterator end() {
       return _cps.end();
     }
-    
+
     // const-iterators
-    const_iterator cbegin() const {
-      return _cps.cbegin();
+    const_iterator begin() const {
+      return _cps.begin();
     }
-    
-    const_iterator cend() const {
-      return _cps.cend();
+
+    const_iterator end() const {
+      return _cps.end();
     }
     
     // modifiers
@@ -99,6 +100,21 @@ class flow_complex {
     cp_container                  _cps;
     std::vector<cp_type *>     _minima;
 };
+
+template <typename number_type, typename size_type>
+bool validate(flow_complex<number_type, size_type> const& fc) {
+  std::map<size_type, int> hist;
+  for (auto const& cp : fc)
+    if (not cp.is_max_at_inf()) {
+      auto r_pair = hist.emplace(cp.index(), 1);
+      if (not r_pair.second)
+        ++r_pair.first->second;
+    }
+  int sum = 0;
+  for (auto const& el : hist)
+    sum += (0 == (el.first % 2) ? el.second : -el.second);
+  return 1 == sum;
+}
 
 }  // namespace FC
 

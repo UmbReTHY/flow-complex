@@ -54,6 +54,17 @@ public:
     _location.swap(tmp._location);
   }
   
+  descend_task & operator=(descend_task && rhs) {
+    Logger() << "DT-MOVE-ASSIGN: address = " << this << std::endl;
+    if (this != &rhs) {
+      _ah = std::move(rhs._ah);
+      _succ = rhs._succ;
+      _ignore_idx = rhs._ignore_idx;
+      _location.swap(rhs._location);
+    }
+    return *this;
+  }
+  
   ~descend_task() {
     Logger() << "DELETE-DT: " << this << std::endl;
   }
@@ -62,7 +73,7 @@ public:
   descend_task & operator=(descend_task const&) = delete;
   
   template <class DTHandler, class ATHandler, class CIHandler>
-  void execute(DTHandler & dth, ATHandler & ath, fc_type & fc,
+  void execute(ATHandler & ath, DTHandler & dth, fc_type & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
     thread_local eigen_vector driver(pc.dim());
