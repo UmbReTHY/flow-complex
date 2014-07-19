@@ -14,7 +14,7 @@
 #include <Eigen/Core>
 
 // local headers
-#include "benchmarks/compute_tbb_ll.hpp"
+#include "compute.hpp"
 #include "logger.hpp"
 
 /**
@@ -28,7 +28,7 @@ int main(int, char**) {
   size_type constexpr NUM_PTS  =     120;
   size_type constexpr DIM      =       4;
   size_type constexpr NUM_RUNS =       3;
-  size_type constexpr NUM_THREADS =    8;
+  size_type constexpr NUM_THREADS =    4;
 
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
 
