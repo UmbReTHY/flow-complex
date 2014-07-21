@@ -9,6 +9,7 @@
 
 #include "logger.hpp"
 #include "utility.hpp"
+#include "makros.h"
 
 namespace FC {
 
@@ -126,8 +127,8 @@ private:
 };
 
 template <typename number_type, typename size_type>
-bool operator==(critical_point<number_type, size_type> const& lhs,
-                critical_point<number_type, size_type> const& rhs) {
+__pure bool operator==(critical_point<number_type, size_type> const& lhs,
+                       critical_point<number_type, size_type> const& rhs) {
   assert(std::is_sorted(lhs.idx_begin(), lhs.idx_end()));
   assert(std::is_sorted(rhs.idx_begin(), rhs.idx_end()));
   // we want to allow cps of different indices to be compared

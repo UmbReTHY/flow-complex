@@ -51,13 +51,14 @@ public:
     Logger() << "**AH-DESTRUCT " << this << std::endl;
   }
 
-  affine_hull & operator=(affine_hull && tmp) {
-    if (this != &tmp) {
-     _dyn_qr = std::move(tmp._dyn_qr);
-     _members = std::move(tmp._members);
-    }
-    return *this;
-  }
+//  affine_hull & operator=(affine_hull && tmp) {
+//    if (this != &tmp) {
+//     _dyn_qr = std::move(tmp._dyn_qr);
+//     _members = std::move(tmp._members);
+//    }
+//    return *this;
+//  }
+  affine_hull & operator=(affine_hull &&) = delete;
   affine_hull & operator=(affine_hull const&) = delete;
   
   void append_point(size_type const idx) {

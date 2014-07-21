@@ -8,7 +8,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set (CMAKE_CXX_FLAGS "-fcolor-diagnostics")
   endif()
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wsuggest-attribute=pure -Wsuggest-attribute=const")
   set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set (CMAKE_CXX_FLAGS_RELEASE "-Wno-unused-parameter -DNDEBUG -O3")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
@@ -35,7 +35,7 @@ include_directories(SYSTEM
                     "${CMAKE_SOURCE_DIR}/nanoflann"
                     ${TBB_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR})
-     
+
 if (BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)

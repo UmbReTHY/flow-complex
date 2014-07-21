@@ -7,6 +7,8 @@
 
 #include <Eigen/Core>
 
+#include "makros.h"
+
 namespace FC {
 
 template <typename T>
@@ -63,7 +65,7 @@ private:
 
 struct RangeHash {
   template <class Iterator>
-  std::size_t operator()(Iterator begin, Iterator end) const {
+  __pure std::size_t operator()(Iterator begin, Iterator end) const {
     assert(std::is_sorted(begin, end));
     // the code below is boost's hash_range - thx boost
     std::size_t seed = 0;

@@ -24,11 +24,11 @@
 int main(int, char**) {
   using number_type = double;
   using size_type = std::uint32_t;
-  
-  size_type constexpr NUM_PTS  =     120;
+
+  size_type constexpr NUM_PTS  =     150;
   size_type constexpr DIM      =       4;
-  size_type constexpr NUM_RUNS =       3;
-  size_type constexpr NUM_THREADS =    4;
+  size_type constexpr NUM_RUNS =      10;
+  size_type constexpr NUM_THREADS =   32;
 
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
 
