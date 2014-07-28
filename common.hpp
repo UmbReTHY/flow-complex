@@ -70,13 +70,12 @@ void spawn_sub_descends(DTHandler & dth,
   // we skip the first position to use it as the "move-case" after the loop
   assert(drop_pos_begin != drop_pos_end);
   cp_type * existing_cp = nullptr;
-  // TODO one iteration could be moved, instead of copied
   for (Iterator it = /*std::next(*/drop_pos_begin/*)*/; it != drop_pos_end; ++it) {
     auto new_ah(ah);
     new_ah.drop_point(new_ah.begin() + *it);
     if ((existing_cp = fc.find(cp_type(new_ah.begin(), new_ah.end(), 0)))) {
       Logger() << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
-      // TODO update successors
+      existing_cp->add_successor(succ);
     } else {
       auto const& dropped_idx = *(ah.begin() + *it);
       Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
@@ -84,11 +83,6 @@ void spawn_sub_descends(DTHandler & dth,
       dth(dt(std::move(new_ah), eigen_vector(x), succ, dropped_idx));
     }
   }
-//  assert(drop_pos_begin != drop_pos_end);
-//  size_type dropped_idx = *(ah.begin() + *drop_pos_begin);
-//  Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
-//  ah.drop_point(ah.begin() + *drop_pos_begin);
-//  dth(dt(std::move(ah), std::move(x), succ, dropped_idx));
 }
 
 }  // namespace FC

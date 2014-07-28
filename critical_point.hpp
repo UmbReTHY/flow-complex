@@ -7,6 +7,8 @@
 #include <iterator>
 #include <vector>
 
+#include <tbb/concurrent_unordered_set.h>
+
 #include "logger.hpp"
 #include "utility.hpp"
 #include "makros.h"
@@ -23,7 +25,7 @@ public:
   typedef _size_type                               size_type;
   typedef critical_point<_number_type, _size_type> self_type;
 private:
-  using succ_container = std::vector<self_type const*>;
+  using succ_container = tbb::concurrent_unordered_set<self_type const*>;
   using idx_container = std::vector<_size_type>;
 public:    
   typedef typename idx_container::const_iterator   idx_iterator;
@@ -42,10 +44,10 @@ public:
   template <typename IdxIterator>
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist, self_type const* succ)
-    : critical_point(idx_begin, idx_end, std::move(sq_dist)) {  // TODO make delegated-to ctor the most general one
+    : critical_point(idx_begin, idx_end, std::move(sq_dist)) {
     Logger() << "**CP-CTOR: " << this << std::endl;
     assert(succ);
-    _successors.push_back(succ);
+    _successors.insert(succ);
   }
   
   // constructor for cp at inf
@@ -56,16 +58,13 @@ public:
 
   // constructors and assignment-operators
   critical_point(critical_point && tmp) : _indices(std::move(tmp._indices)),
-    _successors(std::move(tmp._successors)) {
+    _successors() {
     Logger() << "**CP-MOVE-CTOR: " << this << std::endl;
+    _successors.swap(tmp._successors);
     if (is_max_at_inf())
       _index = std::move(tmp._index);
     else
       _sq_dist = std::move(tmp._sq_dist);
-  }
-  
-  ~critical_point() {
-//    Logger() << "**CP-DESTRUCT: " << this << std::endl;
   }
   
   critical_point(critical_point const&) = default;
@@ -92,9 +91,7 @@ public:
   
   // modifiers
   void add_successor(self_type const* succ) {
-    assert(_successors.cend() ==
-           std::find(_successors.cbegin(), _successors.cend(), succ));
-    _successors.push_back(succ);
+    _successors.insert(succ);
   }
   
   void erase(self_type const*);

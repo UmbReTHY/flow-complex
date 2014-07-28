@@ -163,7 +163,8 @@ public:
           _ah.append_point(*it);
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
-          simplex_case_upflow(lambda, driver, nnvec.begin(), nnvec.end(),
+          simplex_case_upflow(lambda, driver,
+                              idx_store.begin(), idx_store.end(),
                               fc, ath, dth);
           break;  // EXIT 2
         } else {
@@ -235,7 +236,6 @@ private:
     auto & ray = _ray;
     assert(ah.size() == (pc.dim() + 1));
     assert(std::distance(begin, end) >= pc.dim() + 1);
-    // TODO static_assert: type of IdxIterator == size_type
     Logger() << "FINITE MAX SUSPECT\n";
     assert(lambda.size() == ah.size());
     ah.project(x, lambda);
@@ -249,12 +249,6 @@ private:
       auto r_pair = fc.insert(cp_type(ah.begin(), ah.end(), sq_dist));
       if (r_pair.first) {  // only spawn descends for new maxima
         auto max_ptr = r_pair.second;
-        // we know/assume the point added last is the one in last position
-        // within affine hull: so we don't make (begin + dim() + 1) the end
-        // of pos coeffs since we don't want to descend back to where we came from
-        // TODO because of this, we don't get all the incidences right:
-        //      this max_ptr is (possibly) the succ of a cp we found from d-1 cp
-        //      or a descend_task of such a d-1 facet
         auto pos_end = std::next(begin, pc.dim() + 1);
         std::iota(begin, pos_end, 0);
         spawn_sub_descends(dth, fc, begin, pos_end, std::move(x), std::move(ah),
@@ -262,8 +256,7 @@ private:
       }
     } else {
       Logger() << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
-      size_type dropped_idx;  // TODO get rid of this temporary
-      // TODO move the last iteration rather than copying it
+      size_type dropped_idx;
       for (auto it = begin; it != neg_end; ++it) {
         auto new_ah(ah);
         dropped_idx = *(ah.begin() + *it);

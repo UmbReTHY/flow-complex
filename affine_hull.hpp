@@ -51,13 +51,6 @@ public:
     Logger() << "**AH-DESTRUCT " << this << std::endl;
   }
 
-//  affine_hull & operator=(affine_hull && tmp) {
-//    if (this != &tmp) {
-//     _dyn_qr = std::move(tmp._dyn_qr);
-//     _members = std::move(tmp._members);
-//    }
-//    return *this;
-//  }
   affine_hull & operator=(affine_hull &&) = delete;
   affine_hull & operator=(affine_hull const&) = delete;
   
@@ -66,7 +59,6 @@ public:
     assert(size() <= _pc.dim());
     // it requires an idx that serves as the origin for adding a column
     if (size() > 0)
-      // TODO inspect compiler code: does this create unnecessary temporaries?
       _dyn_qr.append_column(_pc[idx] - _pc[_members.front()]);
     _members.push_back(idx);
   }
@@ -85,8 +77,6 @@ public:
       // if there's at least one column left after deleting a member
       // we need to perform a rank-one update on it
       if (del_orig && _members.size() > 2) {
-        // TODO inspect the compiler behavior: does Eigen::Ones generate a
-        //      temporary
         _dyn_qr.rank_one_update(_pc[_members.front()] - _pc[_members[1]],
                                 eigen_vector::Ones(_dyn_qr.num_cols()));
       }

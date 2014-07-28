@@ -8,7 +8,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set (CMAKE_CXX_FLAGS "-fcolor-diagnostics")
   endif()
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wsuggest-attribute=pure -Wsuggest-attribute=const")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
   set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set (CMAKE_CXX_FLAGS_RELEASE "-Wno-unused-parameter -DNDEBUG -O3")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
@@ -25,7 +25,7 @@ option(BUILD_TESTS
        "builds the tests and provide a test target for Makefiles"
        OFF)
 
-option(BUILD_EXAMPLES "" ON)
+option(BUILD_EXAMPLES "" OFF)
 
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)

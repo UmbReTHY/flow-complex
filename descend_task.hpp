@@ -112,21 +112,25 @@ public:
         if (insert_pair.first) {
           auto * new_succ = insert_pair.second;
           if (new_succ->index() > 1) {
-            // TODO for _ah.size() != pc.dim(), we can move the arguments
             std::iota(pos_offsets.begin(),
                       std::next(pos_offsets.begin(), _ah.size()), 0);
             spawn_sub_descends(dth, fc, pos_offsets.begin(),
                                std::next(pos_offsets.begin(), _ah.size()),
                                eigen_vector(x), _ah, new_succ);
           } else {
-            // TODO update incidences of idx 0 cps
+            // update incidences of the adjacent minima, of this gabriel edge
+            assert(1 == new_succ->index());
+            auto idx_it = new_succ->idx_begin();
+            fc.minimum(*idx_it)->add_successor(new_succ);
+            fc.minimum(*++idx_it)->add_successor(new_succ);
           }
         } else {
-          // TODO update incidences of insert_pair.second
+          // update incidences of insert_pair.second
+          auto * already_found_cp = insert_pair.second;
+          already_found_cp->add_successor(_succ);
         }
       } else {
         Logger() << "ONLY AFFINE HULL\n";
-        // TODO move _ah and x if the ASCEND branch below won't be executed
         spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                            eigen_vector(x), _ah, _succ);
       }
@@ -138,11 +142,6 @@ public:
         Logger() << "t = " << nn.second << std::endl;
         assert(nn.first == &stopper);  // there is no stopper -> radius search
         ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
-        // TODO this case has changed, especially when the subsequend at flows to inf
-        // TODO introduce vector of succs -> for alle spawn_sub_descends
-        //      we just have to update this tasks succ vector
-        //      (with the cp at inf) and pass it; we have to move this check
-        //      way up to the top, however
       } else {
         Logger() << "NO ASCEND TO OTHER SIDE, BECAUSE "
                   << (_ah.size() == pc.dim() ? "ALREADY DESCENDED IN HERE\n"
@@ -163,7 +162,6 @@ public:
                          std::move(_location), std::move(_ah), _succ);
     }
   }
-  
 private:
   affine_hull<point_cloud_type>         _ah;
   eigen_vector                    _location;
