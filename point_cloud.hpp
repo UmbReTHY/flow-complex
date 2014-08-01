@@ -83,7 +83,7 @@ public:
     auto const size = std::distance(begin, end);
     _points.reserve(size);
     for (auto it = begin; it != end; ++it)
-      _points.emplace_back(*it, dim);
+      _points.emplace_back(&((*it)[0]), dim);
     using Params = nanoflann::KDTreeSingleIndexAdaptorParams;
     _kd_tree.reset(new KDTree(dim, _data_adaptor, Params(15)));
     _kd_tree->buildIndex();
