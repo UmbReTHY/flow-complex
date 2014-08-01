@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <ostream>
 
 #include <tbb/concurrent_unordered_set.h>
 
@@ -94,7 +95,9 @@ public:
     _successors.insert(succ);
   }
   
-  void erase(self_type const*);
+  void erase(self_type const* succ) {
+    _successors.unsafe_erase(succ);
+  }
   void erase(succ_iterator);
 
   // info
@@ -153,6 +156,20 @@ struct CPHash {
     return range_hash(cp.idx_begin(), cp.idx_end());
   }
 };
+
+/**
+  @brief prints only the index sequence
+*/
+template <typename nt, typename st>
+std::ostream & operator<<(std::ostream & os, critical_point<nt, st> const& cp) {
+  if (cp.is_max_at_inf()) {
+    os << "inf ";
+  } else {
+    for (auto it = cp.idx_begin(); it != cp.idx_end(); ++it)
+      os << *it << " ";
+  }
+  return os;
+}
 
 }  // namespace FC
 
