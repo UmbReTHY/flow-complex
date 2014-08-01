@@ -45,3 +45,5 @@ if (BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif (BUILD_EXAMPLES)
 
+add_subdirectory(tools)
+
