@@ -1,9 +1,12 @@
 #ifndef FLOW_COMPLEX_HPP_
 #define FLOW_COMPLEX_HPP_
 
+#include <cmath>
+
 #include <algorithm>
 #include <utility>
 #include <map>
+#include <ostream>
 
 #include <tbb/concurrent_unordered_set.h>
 
@@ -12,8 +15,13 @@
 
 namespace FC {
 
+template <typename nt, typename st> class flow_complex;
+template <typename nt, typename st>
+std::ostream & operator<<(std::ostream &, flow_complex<nt, st> const&);
+
 template <typename _number_type, typename _size_type>
 class flow_complex {
+using self_t = flow_complex<_number_type, _size_type>;
   public:
     typedef _number_type                             number_type;
     typedef _size_type                                 size_type;
@@ -37,11 +45,21 @@ class flow_complex {
         _minima[i] = insert(cp_type(&i, &i + 1, 0)).second;
     }
     // copy- and move-constructor
-    flow_complex(flow_complex const&) = default;
-    flow_complex(flow_complex &&) = default;
-    // copy- and move-constructor
-    flow_complex & operator=(flow_complex const&) = default;
-    flow_complex & operator=(flow_complex &&) = default;
+    flow_complex(flow_complex const&) = delete;
+    flow_complex(flow_complex && tmp)
+    : _max_at_inf(tmp._max_at_inf), _cps(), _minima(std::move(tmp._minima)) {
+      _cps.swap(tmp._cps);
+    }
+    // copy- and move-assign
+    flow_complex & operator=(flow_complex const&) = delete;
+    flow_complex & operator=(flow_complex && rhs) {
+      if (this != &rhs) {
+        _max_at_inf = rhs._max_at_inf;
+        _cps.swap(rhs._cps);
+        _minima = std::move(rhs._minima);
+      }
+      return *this;
+    }
   
     // iterators
     iterator begin() {
@@ -94,11 +112,15 @@ class flow_complex {
       auto it = _cps.find(cp);
       return (it == _cps.end() ? nullptr : &*it);
     }
+private:
+//    flow_complex() = default;
+  
+  cp_type *              _max_at_inf;
+  cp_container                  _cps;
+  std::vector<cp_type *>     _minima;
     
-  private:
-    cp_type *              _max_at_inf;
-    cp_container                  _cps;
-    std::vector<cp_type *>     _minima;
+//    template <typename nt, typename st>
+//    friend std::ostream & operator<<(std::ostream &, flow_complex<nt, st> const&);
 };
 
 template <typename number_type, typename size_type>
@@ -114,6 +136,25 @@ bool validate(flow_complex<number_type, size_type> const& fc) {
   for (auto const& el : hist)
     sum += (0 == (el.first % 2) ? el.second : -el.second);
   return 1 == sum;
+}
+
+
+template <typename nt, typename st>
+std::ostream & operator<<(std::ostream & os, flow_complex<nt, st> const& fc) {
+  for (auto const& cp : fc) {
+    if (cp.is_max_at_inf()) {
+      os << cp << cp.index() << std::endl;
+    } else {
+      os << cp;
+      os << "| ";
+      os << std::sqrt(cp.sq_dist());
+      os << " ";
+      for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
+        os << "| " << **it;
+      os << std::endl;
+    }
+  }
+  return os;
 }
 
 }  // namespace FC
