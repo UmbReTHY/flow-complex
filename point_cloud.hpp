@@ -142,6 +142,14 @@ public:
     return r;
   }
   
+  template <class Derived>
+  void k_nearest_neighors(Eigen::MatrixBase<Derived> const& q,
+                          size_type k,
+                          size_type * indices,
+                          number_type * sq_distances) {
+    _kd_tree->knnSearch(&q[0], k, indices, sq_distances);
+  }
+  
   template <class Iterator, class Derived>
   Iterator radius_search(Eigen::MatrixBase<Derived> const& q,
                          number_type squared_radius,
