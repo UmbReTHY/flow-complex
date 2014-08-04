@@ -1,5 +1,3 @@
-find_package(GooglePerfTools)
-
 add_executable(simple simple.cpp)
 target_link_libraries(simple ${TBB_LIBRARIES})
 

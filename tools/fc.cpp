@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <string>
 
+#define EIGEN_DONT_VECTORIZE
+
 #include "file_io.hpp"
 #include "compute.hpp"
 #include "clean.hpp"

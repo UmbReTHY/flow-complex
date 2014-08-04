@@ -29,6 +29,7 @@ option(BUILD_EXAMPLES "" OFF)
 
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
+find_package(GooglePerfTools)
 
 include_directories(SYSTEM
                     ${EIGEN3_INCLUDE_DIR}
