@@ -8,7 +8,7 @@
 #include <vector>
 #include <ostream>
 
-#include <tbb/concurrent_unordered_set.h>
+#include <tbb/mutex.h>
 
 #include "logger.hpp"
 #include "utility.hpp"
@@ -26,7 +26,7 @@ public:
   typedef _size_type                               size_type;
   typedef critical_point<_number_type, _size_type> self_type;
 private:
-  using succ_container = tbb::concurrent_unordered_set<self_type const*>;
+  using succ_container = std::vector<self_type const*>;
   using idx_container = std::vector<_size_type>;
 public:    
   typedef typename idx_container::const_iterator   idx_iterator;
@@ -48,7 +48,7 @@ public:
     : critical_point(idx_begin, idx_end, std::move(sq_dist)) {
     Logger() << "**CP-CTOR: " << this << std::endl;
     assert(succ);
-    _successors.insert(succ);
+    _successors.push_back(succ);
   }
   
   // constructor for cp at inf
@@ -59,9 +59,8 @@ public:
 
   // constructors and assignment-operators
   critical_point(critical_point && tmp) : _indices(std::move(tmp._indices)),
-    _successors() {
+    _successors(std::move(tmp._successors)) {
     Logger() << "**CP-MOVE-CTOR: " << this << std::endl;
-    _successors.swap(tmp._successors);
     if (is_max_at_inf())
       _index = std::move(tmp._index);
     else
@@ -92,11 +91,15 @@ public:
   
   // modifiers
   void add_successor(self_type const* succ) {
-    _successors.insert(succ);
+    tbb::mutex::scoped_lock lock(_succ_mutex);
+    if (succ_end() == std::find(succ_begin(), succ_end(), succ))
+      _successors.push_back(succ);
   }
   
   void erase(self_type const* succ) {
-    _successors.unsafe_erase(succ);
+    auto it = std::find(succ_begin(), succ_end(), succ);
+    if (it != succ_end())
+      _successors.erase(it);
   }
   void erase(succ_iterator);
 
@@ -120,6 +123,7 @@ public:
 private:
   idx_container  _indices;
   succ_container _successors;
+  tbb::mutex     _succ_mutex;
   union {
     _number_type _sq_dist;  // for regular cps
     _size_type   _index;   // for cp at inf
