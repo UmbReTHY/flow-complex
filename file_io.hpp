@@ -7,6 +7,9 @@
 #include <vector>
 #include <stdexcept>
 #include <ostream>
+#include <istream>
+#include <limits>
+#include <iomanip>
 
 namespace FC {
 
@@ -46,21 +49,18 @@ std::ostream & operator<<(std::ostream & os, point_store<float_t> const& ps) {
   for (auto it = ps.cbegin(); it != ps.cend(); ++it) {
     auto & p = *it;
     for (auto e : p)
-      os << e << " ";
+      os << std::setprecision(std::numeric_limits<float_t>::digits10)
+         << e << " ";
     os << "\n";
   }
   return os;
 }
 
 template <typename float_t>
-point_store<float_t> from_file(char const* filename) {
-  std::ifstream f(filename);
-  if (not f)
-    throw std::runtime_error("could not open file");
+std::istream & operator>>(std::istream & is, point_store<float_t> & pts) {
   std::string line;
-  point_store<float_t> pts;
   std::vector<float_t> tmp_p;
-  while (std::getline(f, line)) {
+  while (std::getline(is, line)) {
     if (line.empty())
       continue;
     std::istringstream linestream(line);
@@ -74,7 +74,7 @@ point_store<float_t> from_file(char const* filename) {
         *p_it++ = e;
     }
   }
-  return pts;
+  return is;
 }
 
 }

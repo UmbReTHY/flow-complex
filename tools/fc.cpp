@@ -14,11 +14,14 @@
 int main(int argc, char ** argv) {
   try {
     using float_t = double;
-
     if (argc != 2)
       throw std::invalid_argument("usage: fc <point_cloud_file>");
     auto * filename = argv[1];
-    auto ps = FC::from_file<float_t>(filename);
+    std::ifstream in_file(filename);
+    if (not in_file)
+      throw std::runtime_error(std::string("could not open ") + filename);
+    FC::point_store<float_t> ps;
+    in_file >> ps;
     if (not ps.size())
       throw std::invalid_argument("empty data sets");
 
