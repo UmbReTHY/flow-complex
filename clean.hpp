@@ -3,10 +3,11 @@
 
 #include <algorithm>
 #include <functional>
-#include <iterator>
 #include <map>
 #include <vector>
+#include <utility>
 
+#include "critical_point.hpp"
 #include "flow_complex.hpp"
 
 namespace FC {
