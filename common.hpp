@@ -7,6 +7,7 @@
 #include <ostream>
 #include <iterator>
 #include <utility>
+#include <vector>
 
 #include <Eigen/Core>
 
@@ -70,18 +71,35 @@ void spawn_sub_descends(DTHandler & dth,
   // we skip the first position to use it as the "move-case" after the loop
   assert(drop_pos_begin != drop_pos_end);
   cp_type * existing_cp = nullptr;
-  for (Iterator it = /*std::next(*/drop_pos_begin/*)*/; it != drop_pos_end; ++it) {
-    auto new_ah(ah);
-    new_ah.drop_point(new_ah.begin() + *it);
-    if ((existing_cp = fc.find(cp_type(new_ah.begin(), new_ah.end(), 0)))) {
+  // stores the indices for cp creation - this avoids creating a whole
+  // affine hull, in case existing_cp != nullptr
+  std::vector<size_type> newidx(ah.size() - 1);
+  for (Iterator it = std::next(drop_pos_begin); it != drop_pos_end; ++it) {
+    std::copy_if(ah.begin(), ah.end(), newidx.begin(),
+                 [&ah, it](size_type idx) {return idx != *(ah.begin() + *it);});
+    if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
       Logger() << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
       existing_cp->add_successor(succ);
     } else {
+      auto new_ah(ah);
+      new_ah.drop_point(new_ah.begin() + *it);
       auto const& dropped_idx = *(ah.begin() + *it);
       Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
       using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
       dth(dt(std::move(new_ah), eigen_vector(x), succ, dropped_idx));
     }
+  }
+  // move-case for "first" (skipped) iteration
+  // same loop body, except that we can move ah, instead of creating a copy of it
+  size_type const dropped_idx = *(ah.begin() + *drop_pos_begin);
+  ah.drop_point(ah.begin() + *drop_pos_begin);
+  if ((existing_cp = fc.find(cp_type(ah.begin(), ah.end(), 0)))) {
+    Logger() << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
+    existing_cp->add_successor(succ);
+  } else {
+    Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
+    using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
+    dth(dt(std::move(ah), eigen_vector(x), succ, dropped_idx));
   }
 }
 
