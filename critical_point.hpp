@@ -7,6 +7,7 @@
 #include <iterator>
 #include <vector>
 #include <ostream>
+#include <istream>
 
 #include <tbb/mutex.h>
 
@@ -15,6 +16,9 @@
 #include "makros.h"
 
 namespace FC {
+
+// forward declaration
+template <typename nt, typename st> class flow_complex;
 
 /**
   @brief 
@@ -128,6 +132,9 @@ private:
     _number_type _sq_dist;  // for regular cps
     _size_type   _index;   // for cp at inf
   };
+  
+  template <typename nt, typename st>
+  friend std::istream & operator>>(std::istream &, flow_complex<nt, st> &);
 };
 
 template <typename number_type, typename size_type>

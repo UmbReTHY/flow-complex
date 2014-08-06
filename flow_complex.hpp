@@ -7,6 +7,9 @@
 #include <utility>
 #include <map>
 #include <ostream>
+#include <istream>
+#include <string>
+#include <sstream>
 
 #include <tbb/concurrent_unordered_set.h>
 
@@ -113,14 +116,12 @@ using self_t = flow_complex<_number_type, _size_type>;
       return (it == _cps.end() ? nullptr : &*it);
     }
 private:
-//    flow_complex() = default;
-  
   cp_type *              _max_at_inf;
   cp_container                  _cps;
   std::vector<cp_type *>     _minima;
     
-//    template <typename nt, typename st>
-//    friend std::ostream & operator<<(std::ostream &, flow_complex<nt, st> const&);
+  template <typename nt, typename st>
+  friend std::istream & operator>>(std::istream &, flow_complex<nt, st> &);
 };
 
 template <typename number_type, typename size_type>
@@ -155,6 +156,100 @@ std::ostream & operator<<(std::ostream & os, flow_complex<nt, st> const& fc) {
     }
   }
   return os;
+}
+
+template <typename nt, typename st>
+std::istream & operator>>(std::istream & is,
+                          flow_complex<nt, st> & fc) {
+  // types used
+  using fc_type = flow_complex<nt, st>;
+  using cp_type = typename fc_type::cp_type;
+  using size_type = std::string::size_type;
+  using float_t = typename fc_type::number_type;
+  // init the given fc
+  fc._cps.clear();
+  fc._max_at_inf = nullptr;
+  fc._minima.clear();
+  // "global" variables for lambdas
+  std::string line;
+  std::vector<st> idxvec;
+  float_t dist;
+  auto const WS = " \t";  // WHITESPACE
+  auto const DELIM = '|';
+  // helper lambdas
+  auto is_inf_line = [WS] (std::string const& s, size_type start = 0) {
+    size_type pos1 = s.find_first_not_of(WS, start);
+    size_type pos2 = s.find_first_of(WS, pos1);
+    pos2 = (pos2 == std::string::npos) ? pos2 : pos2 - pos1;
+    return s.substr(pos1, pos2) == "inf";
+  };
+  auto check_pos = [] (std::size_t pos) {
+    if (pos == std::string::npos) throw std::invalid_argument("parse error");
+  };
+  auto parse_indices = [&] (std::string const& s, size_type start) {
+    idxvec.clear();
+    size_type end = s.find_first_of(DELIM, start);
+    if (not is_inf_line(s, start)) {
+      std::istringstream is(s.substr(start, end - start));
+      st tmp;
+      while (is >> tmp)
+        idxvec.push_back(tmp);
+    }
+    return end;
+  };
+  auto parse_dist = [&dist] (std::string const& s, size_type start) {
+    size_type end = s.find_first_of(DELIM, start);
+    std::istringstream is(s.substr(start, end - start));
+    is >> dist;
+    return end;
+  };
+  // parsing loop
+  while(std::getline(is, line)) {
+    // skip empty and WS lines
+    if (line.empty() or std::string::npos == line.find_first_not_of(WS))
+      continue;
+    if (is_inf_line(line)) {  // parse the cp at inf
+      auto pos = line.find_first_not_of(WS);
+      check_pos(pos);
+      pos = line.find_first_of(WS, pos + 1);
+      check_pos(pos);
+      std::istringstream dim_stream(line.substr(pos));
+      st dim;
+      dim_stream >> dim;
+      fc._max_at_inf = fc.insert(cp_type(dim)).second;
+    } else {  // parse regular cps
+      size_type start = 0;
+      // parse indices of cp itself
+      start = parse_indices(line, start);
+      check_pos(start);  // there has to be a DELIM
+      // parse distance
+      start = parse_dist(line, ++start);
+      auto rpair = fc.insert(cp_type(idxvec.begin(), idxvec.end(), 0));
+      auto * cp_ptr = rpair.second;
+      // update _minima array
+      if (0 == cp_ptr->index()) {
+        st const min_pos = *cp_ptr->idx_begin();
+        if (fc._minima.size() <= min_pos)
+          fc._minima.resize(min_pos + 1);
+        fc._minima[min_pos] = cp_ptr;
+      }
+      cp_ptr->_sq_dist = dist * dist;  // even if the insert was new
+      // parse succsessors
+      while (std::string::npos != start) {
+        start = parse_indices(line, ++start);
+        if (idxvec.empty()) {  // succ is cp at inf
+          // assumes the data format always lists the cp at inf first
+          assert(fc._max_at_inf);
+          cp_ptr->add_successor(fc._max_at_inf);
+        } else {
+          auto rpair = fc.insert(cp_type(idxvec.begin(), idxvec.end(), 0));
+          auto const* succ_ptr = rpair.second;
+          cp_ptr->add_successor(succ_ptr);
+        }
+      }
+    }
+  }
+  return is;
 }
 
 }  // namespace FC
