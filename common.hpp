@@ -64,7 +64,7 @@ void spawn_sub_descends(DTHandler & dth,
                         Iterator drop_pos_begin, Iterator drop_pos_end,
                         Eigen::Matrix<number_type, Eigen::Dynamic, 1> && x,
                         affine_hull<PointCloud> ah,
-                        critical_point<number_type, size_type> const* succ) {
+                        critical_point<number_type, size_type> * succ) {
   using dt = descend_task<PointCloud>;
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;

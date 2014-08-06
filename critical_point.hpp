@@ -30,7 +30,7 @@ public:
   typedef _size_type                               size_type;
   typedef critical_point<_number_type, _size_type> self_type;
 private:
-  using succ_container = std::vector<self_type const*>;
+  using succ_container = std::vector<self_type *>;
   using idx_container = std::vector<_size_type>;
 public:    
   typedef typename idx_container::const_iterator   idx_iterator;
@@ -48,7 +48,7 @@ public:
   // constructor for regular cps
   template <typename IdxIterator>
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
-                 number_type sq_dist, self_type const* succ)
+                 number_type sq_dist, self_type * succ)
     : critical_point(idx_begin, idx_end, std::move(sq_dist)) {
     Logger() << "**CP-CTOR: " << this << std::endl;
     assert(succ);
@@ -94,7 +94,7 @@ public:
   }
   
   // modifiers
-  void add_successor(self_type const* succ) {
+  void add_successor(self_type * succ) {
     tbb::mutex::scoped_lock lock(_succ_mutex);
     if (succ_end() == std::find(succ_begin(), succ_end(), succ))
       _successors.push_back(succ);

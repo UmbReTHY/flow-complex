@@ -140,7 +140,7 @@ public:
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         assert(_ah.size() == pc.dim());
         Logger() << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
-        auto const* inf_ptr = fc.max_at_inf();
+        auto * inf_ptr = fc.max_at_inf();
         if (_dropped.first) {  // we dropped before flowing to infinity
           Logger() << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse

@@ -103,7 +103,7 @@ using self_t = flow_complex<_number_type, _size_type>;
       return r;
     }
     
-    cp_type const* max_at_inf() const {
+    cp_type * max_at_inf() const {
       return _max_at_inf;
     }
     
@@ -243,7 +243,7 @@ std::istream & operator>>(std::istream & is,
           cp_ptr->add_successor(fc._max_at_inf);
         } else {
           auto rpair = fc.insert(cp_type(idxvec.begin(), idxvec.end(), 0));
-          auto const* succ_ptr = rpair.second;
+          auto * succ_ptr = rpair.second;
           cp_ptr->add_successor(succ_ptr);
         }
       }
