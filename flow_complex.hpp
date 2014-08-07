@@ -10,6 +10,8 @@
 #include <istream>
 #include <string>
 #include <sstream>
+#include <iomanip>
+#include <limits>
 
 #include <tbb/concurrent_unordered_set.h>
 
@@ -151,7 +153,8 @@ std::ostream & operator<<(std::ostream & os, flow_complex<nt, st> const& fc) {
     } else {
       os << cp;
       os << "| ";
-      os << std::sqrt(cp.sq_dist());
+      os << std::setprecision(std::numeric_limits<nt>::digits10)
+         << std::sqrt(cp.sq_dist());
       os << " ";
       for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
         os << "| " << **it;
