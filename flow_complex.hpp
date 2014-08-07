@@ -85,6 +85,10 @@ using self_t = flow_complex<_number_type, _size_type>;
       return _cps.end();
     }
     
+    std::size_t size() const {
+      return _cps.size();
+    }
+    
     // modifiers
     bool erase(cp_type const& cp) {
       return _cps.unsafe_erase(cp);
@@ -129,15 +133,22 @@ private:
   friend std::istream & operator>>(std::istream &, flow_complex<nt, st> &);
 };
 
-template <typename number_type, typename size_type>
-bool validate(flow_complex<number_type, size_type> const& fc) {
-  std::map<size_type, int> hist;
-  for (auto const& cp : fc)
+template <typename nt, typename st>
+std::map<st, int> compute_hist(flow_complex<nt, st> const& fc) {
+  std::map<st, int> hist;
+  for (auto const& cp : fc) {
     if (not cp.is_max_at_inf()) {
       auto r_pair = hist.emplace(cp.index(), 1);
       if (not r_pair.second)
         ++r_pair.first->second;
     }
+  }
+  return hist;
+}
+
+template <typename number_type, typename size_type>
+bool validate(flow_complex<number_type, size_type> const& fc) {
+  auto hist = compute_hist(fc);
   int sum = 0;
   for (auto const& el : hist)
     sum += (0 == (el.first % 2) ? el.second : -el.second);
