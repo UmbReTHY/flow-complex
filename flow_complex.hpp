@@ -51,6 +51,7 @@ using self_t = flow_complex<_number_type, _size_type>;
     flow_complex(flow_complex const&) = delete;
     flow_complex(flow_complex && tmp)
     : _max_at_inf(tmp._max_at_inf), _cps(), _minima(std::move(tmp._minima)) {
+      Logger() << "FC-MOVE-CTOR\n";
       _cps.swap(tmp._cps);
     }
     // copy- and move-assign
@@ -83,7 +84,9 @@ using self_t = flow_complex<_number_type, _size_type>;
     }
     
     // modifiers
-    void erase(cp_type const&);
+    bool erase(cp_type const& cp) {
+      return _cps.unsafe_erase(cp);
+    }
     void erase(iterator);
     void erase(const_iterator);
     
