@@ -31,6 +31,8 @@ try {
   }
   // simplify
   float_t const t = std::atof(argv[1]);
+  if (t < 1)
+    throw std::invalid_argument("prerequisite: t >= 1");
   fc = simplify(std::move(fc), t);
   // write result flow complex to file
   char const* out_filename = argv[3];
