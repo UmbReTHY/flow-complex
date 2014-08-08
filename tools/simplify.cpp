@@ -158,7 +158,7 @@ void print_histogram(std::ostream & os, FC::flow_complex<nt, st> fc) {
       os << " " << p.second;
     os << std::endl;
   };
-  print_hist(0, fc);  // print initial fc
+  print_hist(1, fc);  // print initial fc
   while (INF != min_ratio) {
     fc = reduce(std::move(fc), a_ptr, b_ptr);
     print_hist(min_ratio, fc);
