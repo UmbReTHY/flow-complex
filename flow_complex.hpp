@@ -120,6 +120,10 @@ using self_t = flow_complex<_number_type, _size_type>;
       return _minima[pos];
     }
     
+    size_type num_minima() const {
+      return _minima.size();
+    }
+    
     cp_type * find(cp_type const& cp) const {
       auto it = _cps.find(cp);
       return (it == _cps.end() ? nullptr : &*it);
