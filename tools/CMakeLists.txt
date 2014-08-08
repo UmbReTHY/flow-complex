@@ -9,6 +9,9 @@ target_link_libraries(simplify ${TBB_LIBRARIES})
 add_executable(fc2pc fc2pc.cpp)
 target_link_libraries(fc2pc ${TBB_LIBRARIES})
 
+add_executable(inc-pts inc_pts.cpp)
+target_link_libraries(inc-pts ${TBB_LIBRARIES})
+
 if (GOOGLE_PERFTOOLS_FOUND)
   target_link_libraries(fc ${TCMALLOC_LIBRARIES})
 endif()
