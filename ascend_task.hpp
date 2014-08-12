@@ -134,7 +134,7 @@ public:
                                         vf, nnvec.begin(),
                                         std::next(nnvec.begin(), max_nn));
       } catch(std::exception & e) {
-        std::cerr << "error: " << e.what() << std::endl;
+        std::cerr << "ASCEND-TASK error: " << e.what() << std::endl;
         std::exit(EXIT_FAILURE);
       }
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf

@@ -58,14 +58,16 @@ Iterator get_neg_offsets(Eigen::MatrixBase<Derived> const& lambda,
               descend tasks
 */
 template <class DTHandler, class PointCloud, typename number_type,
-          typename size_type, class Iterator>
+          typename size_type, class Iterator, class Iterator2 = int *>
 void spawn_sub_descends(DTHandler & dth,
                         flow_complex<number_type, size_type> const& fc,
                         Iterator drop_pos_begin, Iterator drop_pos_end,
                         Eigen::Matrix<number_type, Eigen::Dynamic, 1> && x,
                         affine_hull<PointCloud> ah,
-                        critical_point<number_type, size_type> * succ) {
-  using dt = descend_task<PointCloud>;
+                        critical_point<number_type, size_type> * succ,
+                        Iterator2 ignore_begin = nullptr,
+                        Iterator2 ignore_end = nullptr) {
+  using dt_type = descend_task<PointCloud>;
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;
   // we skip the first position to use it as the "move-case" after the loop
@@ -86,7 +88,10 @@ void spawn_sub_descends(DTHandler & dth,
       new_ah.drop_point(new_ah.begin() + *it);
       Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
       using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-      dth(dt(std::move(new_ah), eigen_vector(x), succ, dropped_idx));
+      dt_type dt(std::move(new_ah), eigen_vector(x), succ,
+                 ignore_begin, ignore_end);
+      dt.add_ignore_idx(dropped_idx);
+      dth(std::move(dt));
     }
   }
   // move-case for "first" (skipped) iteration
@@ -101,7 +106,9 @@ void spawn_sub_descends(DTHandler & dth,
     Logger() << "DT takes dropped idx = " << dropped_idx << std::endl;
     using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
     ah.drop_point(ah.begin() + *drop_pos_begin);
-    dth(dt(std::move(ah), eigen_vector(x), succ, dropped_idx));
+    dt_type dt(std::move(ah), eigen_vector(x), succ, ignore_begin, ignore_end);
+    dt.add_ignore_idx(dropped_idx);
+    dth(std::move(dt));
   }
 }
 

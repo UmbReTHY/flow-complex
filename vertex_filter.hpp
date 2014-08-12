@@ -23,18 +23,19 @@ struct vertex_filter {
   /**
     @brief for descend tasks
   */
-  template <class Derived, class MemberIterator>
+  template <class Derived, class MemberIterator, class Iterator>
   vertex_filter(PointCloud const& pc,
                 Eigen::MatrixBase<Derived> const& driver,
                 MemberIterator member_begin, MemberIterator member_end,
-                size_type ignore_idx, ResultIterator result_begin)
+                Iterator ignore_begin, Iterator ignore_end,
+                ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
     _end = pc.radius_search(driver,
                             (pc[*member_begin] - driver).squaredNorm(),
                             _current);
     _end = std::remove_if(_current, _end, [=](size_type idx) {
-      return (member_end != std::find(member_begin, member_end, idx)) or
-             idx == ignore_idx;
+      return (member_end != std::find(member_begin, member_end, idx) or
+              ignore_end != std::find(ignore_begin, ignore_end, idx));
     });
     Logger() << "VERTEX-FILTER ctor: candidate indices = ";
     for (auto it = _current; it != _end; ++it)
@@ -116,15 +117,15 @@ make_at_filter(affine_hull<PointCloud> const& ah,
                  ah.begin(), ah.end(), ignore_idx, result_begin);
 }
 
-template <class PointCloud, class Iterator, class Derived>
+template <class PointCloud, class Iterator, class Derived, class Iterator2>
 vertex_filter<PointCloud, Iterator>
 make_dt_filter(affine_hull<PointCloud> const& ah,
                Eigen::MatrixBase<Derived> const& driver,
-               typename PointCloud::size_type ignore_idx,
+               Iterator2 ignore_begin, Iterator2 ignore_end,
                Iterator result_begin) {
   using vf_type = vertex_filter<PointCloud, Iterator>;
-  return vf_type(ah.pc(), driver, ah.begin(), ah.end(), ignore_idx,
-                 result_begin);
+  return vf_type(ah.pc(), driver, ah.begin(), ah.end(),
+                 ignore_begin, ignore_end, result_begin);
 }
 
 }  // namespace FC
