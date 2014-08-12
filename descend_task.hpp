@@ -160,8 +160,6 @@ public:
       _location += nn.second * ray;
       auto const  stopper_begin = nnvec.begin();
       auto const& stopper_end = nn.first;
-      if (std::distance(stopper_begin, stopper_end) > 1)
-        std::cout << "2 stoppers in descend\n";
       for (auto it = stopper_begin; it != stopper_end; ++it) {  // TODO move last iteration
         size_type stopper = *it;
         Logger() << "DESCEND GOT STOPPED by index: " << stopper << std::endl;

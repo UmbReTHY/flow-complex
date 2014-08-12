@@ -47,7 +47,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
     Logger() << "t = " << t << " for id = " << q_idx << std::endl;
     if (t > 0 and (r.first == begin or t <= r.second)) {
       Logger() << "t-DIFF = " << (t - r.second) << std::endl;
-      if (r.first != begin and t == r.second) {
+      if (r.first != begin and Eigen::internal::isApprox(t, r.second)) {
         if (r.first == end)
           throw std::logic_error("too many nearest neighbors");
       } else {
