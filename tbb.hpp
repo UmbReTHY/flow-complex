@@ -1,7 +1,7 @@
 #ifndef TBB_HPP_
 #define TBB_HPP_
 
-#include <functional>
+#include <stack>
 #include <utility>
 
 #include "ascend_task.hpp"
@@ -10,52 +10,36 @@
 
 namespace FC {
 
-template <class point_cloud_t>
-class abstract_task {
+/**
+  @brief Performs one step of an exploration of the maxima graph. In case a
+         maximum is found, all descend tasks that can be executed from this
+         maximum are also carried out.
+*/
+template <class point_cloud_type_>
+class MaxTask {
 public:
-  typedef point_cloud_t                            pc_type;
-  typedef typename pc_type::number_type        number_type;
-  typedef typename pc_type::size_type            size_type;
-  typedef flow_complex<number_type, size_type>     fc_type;
-  typedef ascend_task<pc_type>                     at_type;
-  typedef descend_task<pc_type>                    dt_type;
-  typedef std::function<void(at_type &&)>         ath_type;
-  typedef std::function<void(dt_type &&)>         dth_type;
+  using pc_type = point_cloud_type_;
+  using at_type = ascend_task<pc_type>;
 
-  virtual void execute(ath_type ath, dth_type dth, fc_type & fc) = 0;
-  
-  virtual ~abstract_task() {
+  MaxTask(at_type at) : _at(std::move(at)) {}
+
+  template <class ATHandler,  class ATCIHandler, class DTCIHandler,
+            typename float_t, typename size_type>
+  void execute(ATHandler & ath, ATCIHandler & acih, DTCIHandler & dcih,
+               flow_complex<float_t, size_type> & fc) {
+    using dt_type = descend_task<pc_type>;
+    std::stack<dt_type> dt_stack;
+    auto dth = [&dt_stack] (dt_type dt) {dt_stack.push(std::move(dt));};
+    _at.execute(ath, dth, fc, acih);
+    while (not dt_stack.empty()) {
+      auto dt(std::move(dt_stack.top()));
+      dt_stack.pop();
+      dt.execute(ath, dth, fc, dcih);
+    }
   }
-};
-
-template <class task_t, class cih_type>
-class tbb_task_wrapper : public abstract_task<typename task_t::point_cloud_type> {
-public:
-  typedef typename task_t::point_cloud_type  pc_type;
-  typedef abstract_task<pc_type>              base_t;
-  typedef typename base_t::ath_type         ath_type;
-  typedef typename base_t::dth_type         dth_type;
-  typedef typename base_t::fc_type           fc_type;
-
-  tbb_task_wrapper(task_t task,  cih_type & cih)
-  : _task(std::move(task)), _cih(cih) {
-  }
-
-  virtual void execute(ath_type ath, dth_type dth, fc_type & fc) {
-    _task.execute(ath, dth, fc, _cih);
-  }
-
 private:
-  task_t     _task;
-  cih_type &  _cih;
+  at_type _at;
 };
-
-template <class task_t, class cih_t>
-abstract_task<typename task_t::point_cloud_type> *
-make_task_wrapper(task_t task, cih_t & cih) {
-  using wrapper_t = tbb_task_wrapper<task_t, cih_t>;
-  return new wrapper_t(std::move(task), cih);
-}
 
 }
 

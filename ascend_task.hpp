@@ -257,7 +257,7 @@ private:
     } else {
       Logger() << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
       size_type dropped_idx;
-      for (auto it = begin; it != neg_end; ++it) {
+      for (auto it = begin; it != neg_end; ++it) {  // TODO reuse this task for one of the iterations
         auto new_ah(ah);
         dropped_idx = *(ah.begin() + *it);
         new_ah.drop_point(new_ah.begin() + *it);
