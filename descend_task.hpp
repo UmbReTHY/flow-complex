@@ -109,6 +109,19 @@ public:
       Logger() << "DESCEND SUCCESSFUL\n";
       auto & x = driver;
       assert(_ah.size() <= lambda.size());
+      // handles both the critical and non-critical case
+      using ci_type = circumsphere_ident<size_type>;
+      if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {
+        Logger() << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
+        using at = ascend_task<point_cloud_type>;
+        Logger() << "t = " << nn.second << std::endl;
+        assert(nn.first == nnvec.begin());  // there is no stopper -> radius search
+        ath(at(_ah, eigen_vector(driver), std::move(ray)));
+      } else {
+        Logger() << "NO ASCEND TO OTHER SIDE, BECAUSE "
+                  << (_ah.size() == pc.dim() ? "ALREADY DESCENDED IN HERE\n"
+                                             : "NO D-1 CRITICAL POINT\n");
+      }
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
       if (std::distance(pos_offsets.begin(), pos_end) == _ah.size()) {
@@ -120,11 +133,10 @@ public:
         if (insert_pair.first) {
           auto * new_succ = insert_pair.second;
           if (new_succ->index() > 1) {
-            std::iota(pos_offsets.begin(),
-                      std::next(pos_offsets.begin(), _ah.size()), 0);
-            spawn_sub_descends(dth, fc, pos_offsets.begin(),
-                               std::next(pos_offsets.begin(), _ah.size()),
-                               eigen_vector(x), _ah, new_succ);
+            auto const pos_end = std::next(pos_offsets.begin(), _ah.size());
+            std::iota(pos_offsets.begin(), pos_end, 0);
+            spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
+                               eigen_vector(x), std::move(_ah), new_succ);
           } else {
             // update incidences of the adjacent minima, of this gabriel edge
             assert(1 == new_succ->index());
@@ -140,27 +152,15 @@ public:
       } else {
         Logger() << "ONLY AFFINE HULL\n";
         spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
-                           eigen_vector(x), _ah, _succ);
+                           eigen_vector(x), std::move(_ah), _succ);
       }
-      // handles both the critical and non-critical case
-      using ci_type = circumsphere_ident<size_type>;
-      if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {
-        Logger() << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
-        using at = ascend_task<point_cloud_type>;
-        Logger() << "t = " << nn.second << std::endl;
-        assert(nn.first == nnvec.begin());  // there is no stopper -> radius search
-        ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
-      } else {
-        Logger() << "NO ASCEND TO OTHER SIDE, BECAUSE "
-                  << (_ah.size() == pc.dim() ? "ALREADY DESCENDED IN HERE\n"
-                                             : "NO D-1 CRITICAL POINT\n");
-      }
+
     } else {
       assert(nn.second < 1.0);
       _location += nn.second * ray;
       auto const  stopper_begin = nnvec.begin();
       auto const& stopper_end = nn.first;
-      for (auto it = stopper_begin; it != stopper_end; ++it) {  // TODO move last iteration
+      for (auto it = std::next(stopper_begin); it != stopper_end; ++it) {
         size_type stopper = *it;
         Logger() << "DESCEND GOT STOPPED by index: " << stopper << std::endl;
         auto new_ah(_ah);
@@ -175,6 +175,15 @@ public:
                            std::move(_location), std::move(new_ah), _succ,
                            stopper_begin, stopper_end);
       }
+      // move first iteration - instead of copying
+      size_type const stopper = *stopper_begin;
+      _ah.append_point(stopper);
+      _ah.project(_location, lambda.head(_ah.size()));
+      auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
+                                     pos_offsets.begin());
+      spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
+                         std::move(_location), std::move(_ah), _succ,
+                         stopper_begin, stopper_end);
     }
   }
 private:

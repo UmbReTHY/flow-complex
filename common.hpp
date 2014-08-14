@@ -75,12 +75,24 @@ void spawn_sub_descends(DTHandler & dth,
   cp_type * existing_cp = nullptr;
   // stores the indices for cp creation - this avoids creating a whole
   // affine hull, in case existing_cp != nullptr
-  std::vector<size_type> newidx(ah.size() - 1);
+  auto const& pc = ah.pc();
+  thread_local std::vector<size_type> newidx(pc.dim() + 1);
+  auto const physical_end = std::copy(ah.begin(), ah.end(), newidx.begin());
+  auto const logical_end = physical_end - 1;
+  auto swap_dropped = [logical_end] (size_type d_idx) {
+    auto it = newidx.begin();
+    while (true) {
+      if (*it == d_idx) {
+        std::swap(*it, *logical_end);
+        break;
+      }
+      ++it;
+    }
+  };
   for (Iterator it = std::next(drop_pos_begin); it != drop_pos_end; ++it) {
     auto const dropped_idx = *(ah.begin() + *it);
-    std::copy_if(ah.begin(), ah.end(), newidx.begin(),
-                 [dropped_idx](size_type idx) {return idx != dropped_idx;});
-    if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
+    swap_dropped(dropped_idx);
+    if ((existing_cp = fc.find(cp_type(newidx.begin(), logical_end, 0)))) {
       Logger() << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
       existing_cp->add_successor(succ);
     } else {
@@ -97,9 +109,8 @@ void spawn_sub_descends(DTHandler & dth,
   // move-case for "first" (skipped) iteration
   // same loop body, except that we can move ah, instead of creating a copy of it
   size_type const dropped_idx = *(ah.begin() + *drop_pos_begin);
-  std::copy_if(ah.begin(), ah.end(), newidx.begin(),
-               [dropped_idx](size_type idx) {return idx != dropped_idx;});
-  if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
+  swap_dropped(dropped_idx);
+  if ((existing_cp = fc.find(cp_type(newidx.begin(), logical_end, 0)))) {
     Logger() << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
     existing_cp->add_successor(succ);
   } else {
