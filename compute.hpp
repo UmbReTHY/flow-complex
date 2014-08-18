@@ -49,7 +49,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   auto acih = std::bind(cih, std::ref(infproxy_cont), std::placeholders::_1);
   auto dcih = std::bind(cih, std::ref(dci), std::placeholders::_1);
   // 3) seed initial ascend task(s)
-  using task_t = MaxTask<pc_type>;
+  using task_t = Task<pc_type>;
   using item_t = std::shared_ptr<task_t>;
   using feeder_t = tbb::parallel_do_feeder<item_t>;
   std::vector<item_t> tasks;
@@ -59,8 +59,7 @@ compute_flow_complex (PointIterator begin, PointIterator end,
     tasks.push_back(item_t(new task_t(at_type(pc))));
   // 4) process all tasks
   tbb::parallel_do(tasks.begin(), tasks.end(), [&](item_t item, feeder_t & f) {
-    auto ath = [&f] (at_type at) {f.add(item_t(new task_t(std::move(at))));};
-    item->execute(ath, acih, dcih, fc);
+    item->execute(f, fc, acih, dcih);
   });
   
   return fc;
