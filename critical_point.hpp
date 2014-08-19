@@ -9,7 +9,7 @@
 #include <ostream>
 #include <istream>
 
-#include <tbb/mutex.h>
+#include <tbb/spin_mutex.h>
 
 #include "logger.hpp"
 #include "utility.hpp"
@@ -32,6 +32,7 @@ public:
 private:
   using succ_container = std::vector<self_type *>;
   using idx_container = std::vector<_size_type>;
+  using mutex_type = tbb::spin_mutex;
 public:    
   typedef typename idx_container::const_iterator   idx_iterator;
   typedef typename succ_container::const_iterator succ_iterator;
@@ -95,7 +96,7 @@ public:
   
   // modifiers
   void add_successor(self_type * succ) {
-    tbb::mutex::scoped_lock lock(_succ_mutex);
+    mutex_type::scoped_lock lock(_succ_mutex);
     if (succ_end() == std::find(succ_begin(), succ_end(), succ))
       _successors.push_back(succ);
   }
@@ -127,7 +128,7 @@ public:
 private:
   idx_container  _indices;
   succ_container _successors;
-  tbb::mutex     _succ_mutex;
+  mutex_type     _succ_mutex;
   union {
     _number_type _sq_dist;  // for regular cps
     _size_type   _index;   // for cp at inf
