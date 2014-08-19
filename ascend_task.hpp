@@ -11,6 +11,7 @@
 #include <utility>
 
 #include <Eigen/Core>
+#include <tbb/spin_mutex.h>
 
 #include "affine_hull.hpp"
 #include "common.hpp"
@@ -191,8 +192,15 @@ private:
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
-    std::random_device rd;
-    int seed = rd();
+    // isolate threads during the call to the seeding random machine
+    using mutex_t = tbb::spin_mutex;
+    static mutex_t seed_mutex;
+    int seed;
+    {
+      std::random_device rd;
+      mutex_t::scoped_lock lock();
+      seed = rd();
+    }
     Logger() << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
@@ -257,7 +265,7 @@ private:
     } else {
       Logger() << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
       size_type dropped_idx;
-      for (auto it = begin; it != neg_end; ++it) {  // TODO reuse this task for one of the iterations
+      for (auto it = begin; it != neg_end; ++it) {
         auto new_ah(ah);
         dropped_idx = *(ah.begin() + *it);
         new_ah.drop_point(new_ah.begin() + *it);
