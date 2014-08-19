@@ -28,6 +28,7 @@ flow_complex<typename base_t<decltype((*PointIterator())[0])>::type,
              size_type>
 compute_flow_complex (PointIterator begin, PointIterator end,
                       dim_type dim) {
+  tbb::task_scheduler_init init;  // init early to hide set-up times
   Logger() << "*****************COMPUTE-START*************************\n";
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
@@ -53,7 +54,6 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   using item_t = std::shared_ptr<task_t>;
   using feeder_t = tbb::parallel_do_feeder<item_t>;
   std::vector<item_t> tasks;
-  tbb::task_scheduler_init init;
   int num_threads = init.default_num_threads();
   for (int i = 1; i <= num_threads; ++i)
     tasks.push_back(item_t(new task_t(at_type(pc))));
