@@ -71,7 +71,14 @@ public:
       _sq_dist = std::move(tmp._sq_dist);
   }
   
-  critical_point(critical_point const&) = default;
+  critical_point(critical_point const& orig)
+    : _indices(orig._indices), _successors(orig._successors) {
+    if (orig.is_max_at_inf())
+      _index = orig._index;
+    else
+      _sq_dist = orig._sq_dist;
+  }
+
   critical_point & operator=(critical_point const&) = delete;
   critical_point & operator=(critical_point &&) = delete;
 
