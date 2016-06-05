@@ -1,5 +1,5 @@
 add_executable(fc fc.cpp)
-target_link_libraries(fc ${TBB_LIBRARIES})
+target_link_libraries(fc ${TBB_LIBRARIES} -lquadmath)
 
 add_executable(perturb perturb.cpp)
 
@@ -7,7 +7,7 @@ add_executable(simplify simplify.cpp)
 target_link_libraries(simplify ${TBB_LIBRARIES})
 
 add_executable(fc2pc fc2pc.cpp)
-target_link_libraries(fc2pc ${TBB_LIBRARIES})
+target_link_libraries(fc2pc ${TBB_LIBRARIES} -lquadmath)
 
 add_executable(inc-pts inc_pts.cpp)
 target_link_libraries(inc-pts ${TBB_LIBRARIES})

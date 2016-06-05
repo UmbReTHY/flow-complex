@@ -162,14 +162,15 @@ bool validate(flow_complex<number_type, size_type> const& fc) {
 
 template <typename nt, typename st>
 std::ostream & operator<<(std::ostream & os, flow_complex<nt, st> const& fc) {
+  using out_nt = long double;
   for (auto const& cp : fc) {
     if (cp.is_max_at_inf()) {
       os << cp << cp.index() << std::endl;
     } else {
       os << cp;
       os << "| ";
-      os << std::setprecision(std::numeric_limits<nt>::digits10)
-         << std::sqrt(cp.sq_dist());
+      os << std::setprecision(std::numeric_limits<out_nt>::digits10)
+         << out_nt(std::sqrt(cp.sq_dist()));
       os << " ";
       for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
         os << "| " << **it;

@@ -538,7 +538,7 @@ namespace nanoflann
 				((void**) m)[0] = base;
 				base = m;
 
-				size_t shift = 0;
+				size_t shift = sizeof(void*);
 				//int size_t = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (WORDSIZE-1);
 
 				remaining = blocksize - sizeof(void*) - shift;

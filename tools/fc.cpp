@@ -7,15 +7,14 @@
 #include <stdexcept>
 #include <string>
 
-#define EIGEN_DONT_VECTORIZE
-
+#include "quadmath.hpp"
 #include "file_io.hpp"
 #include "compute.hpp"
 #include "clean.hpp"
 
 int main(int argc, char ** argv) {
   try {
-    using float_t = double;
+    using float_t = __float128;
     if (argc != 2)
       throw std::invalid_argument("usage: fc <point_cloud_file>");
     auto * filename = argv[1];

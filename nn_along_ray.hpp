@@ -8,6 +8,7 @@
 
 #include <Eigen/Core>
 
+#include "quadmath.hpp"
 #include "vertex_filter.hpp"
 #include "logger.hpp"
 

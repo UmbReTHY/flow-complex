@@ -8,10 +8,12 @@
 #include <algorithm>
 #include <ostream>
 #include <vector>
+#include <numeric>
 
 #include <Eigen/Core>
 
 #include "logger.hpp"
+#include "quadmath.hpp"
 
 namespace FC {
 

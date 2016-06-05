@@ -65,7 +65,7 @@ std::istream & operator>>(std::istream & is, point_store<float_t> & pts) {
       continue;
     std::istringstream linestream(line);
     tmp_p.clear();
-    float_t tmpf;
+    long double tmpf;
     while (linestream >> tmpf)
       tmp_p.push_back(tmpf);
     if (tmp_p.size()) {
