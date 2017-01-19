@@ -80,7 +80,14 @@ public:
                                 eigen_vector::Ones(_dyn_qr.num_cols()));
       }
     }
-    _members.erase(it);
+    // instead of using std::vector::erase, we use this workaround to both
+    // preserve the order without the element being deleted and support
+    // standard library implementations before C++11
+    DCHECK(!_members.empty());
+    const std::size_t del_pos = std::distance(_members.cbegin(), it);
+    auto mutable_it = std::next(_members.begin(), del_pos);
+    std::rotate(mutable_it, std::next(mutable_it), _members.end());
+    _members.resize(_members.size() - 1);
     assert((_members.empty() && _dyn_qr.num_cols() == 0) ||
            _members.size() == _dyn_qr.num_cols() + 1);
   }
