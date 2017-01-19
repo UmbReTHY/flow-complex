@@ -1,16 +1,16 @@
 add_executable(fc fc.cpp)
-target_link_libraries(fc ${TBB_LIBRARIES} -lquadmath)
+target_link_libraries(fc ${TBB_LIBRARIES} glog::glog)
 
 add_executable(perturb perturb.cpp)
 
 add_executable(simplify simplify.cpp)
-target_link_libraries(simplify ${TBB_LIBRARIES})
+target_link_libraries(simplify ${TBB_LIBRARIES} glog::glog)
 
 add_executable(fc2pc fc2pc.cpp)
-target_link_libraries(fc2pc ${TBB_LIBRARIES} -lquadmath)
+target_link_libraries(fc2pc ${TBB_LIBRARIES} glog::glog)
 
 add_executable(inc-pts inc_pts.cpp)
-target_link_libraries(inc-pts ${TBB_LIBRARIES})
+target_link_libraries(inc-pts ${TBB_LIBRARIES} glog::glog)
 
 if (GOOGLE_PERFTOOLS_FOUND)
   target_link_libraries(fc ${TCMALLOC_LIBRARIES})

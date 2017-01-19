@@ -13,10 +13,10 @@
 #include <iomanip>
 #include <limits>
 
+#include <glog/logging.h>
 #include <tbb/concurrent_unordered_set.h>
 
 #include "critical_point.hpp"
-#include "logger.hpp"
 
 namespace FC {
 
@@ -53,7 +53,7 @@ using self_t = flow_complex<_number_type, _size_type>;
     flow_complex(flow_complex const&) = delete;
     flow_complex(flow_complex && tmp)
     : _max_at_inf(tmp._max_at_inf), _cps(), _minima(std::move(tmp._minima)) {
-      Logger() << "FC-MOVE-CTOR\n";
+      LOG(INFO) << "FC-MOVE-CTOR\n";
       _cps.swap(tmp._cps);
     }
     // copy- and move-assign
@@ -106,9 +106,9 @@ using self_t = flow_complex<_number_type, _size_type>;
       r.first =   ret_pair.second;
       r.second = &*ret_pair.first;
       if (r.first)
-        Logger() << "CRITICAL POINT IS NEW!\n";
+        LOG(INFO) << "CRITICAL POINT IS NEW!\n";
       else
-        Logger() << "CRITICAL POINT WAS FOUND ALREADY\n";
+        LOG(INFO) << "CRITICAL POINT WAS FOUND ALREADY\n";
       return r;
     }
     

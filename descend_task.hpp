@@ -6,11 +6,12 @@
 #include <vector>
 
 #include <Eigen/Core>
+#include <glog/logging.h>
 
 #include "affine_hull.hpp"
 #include "common.hpp"
 #include "critical_point.hpp"
-#include <flow_complex.hpp>
+#include "flow_complex.hpp"
 #include "update_ray.hpp"
 #include "utility.hpp"
 #include "vertex_filter.hpp"
@@ -41,7 +42,7 @@ public:
                Iterator ignore_begin, Iterator ignore_end)
     : _ah(std::move(ah)), _location(), _succ(succ),
       _ignore_indices(ignore_begin, ignore_end) {
-    Logger() << "****DT-CONSTRUCTOR-BEGIN*****\n"
+    LOG(INFO) << "****DT-CONSTRUCTOR-BEGIN*****\n"
              << "address = " << this << std::endl
              << _ah << std::endl
              << "****DT-CONSTRUCTOR-END*****\n";
@@ -51,12 +52,12 @@ public:
   descend_task(descend_task && tmp)
     : _ah(std::move(tmp._ah)), _location(), _succ(tmp._succ),
       _ignore_indices(std::move(tmp._ignore_indices)) {
-    Logger() << "DT-MOVE-CONSTR: address = " << this << std::endl;
+    LOG(INFO) << "DT-MOVE-CONSTR: address = " << this << std::endl;
     _location.swap(tmp._location);
   }
   
   descend_task & operator=(descend_task && rhs) {
-    Logger() << "DT-MOVE-ASSIGN: address = " << this << std::endl;
+    LOG(INFO) << "DT-MOVE-ASSIGN: address = " << this << std::endl;
     if (this != &rhs) {
       _ah = std::move(rhs._ah);
       _succ = rhs._succ;
@@ -67,7 +68,7 @@ public:
   }
   
   ~descend_task() {
-    Logger() << "DELETE-DT: " << this << std::endl;
+    LOG(INFO) << "DELETE-DT: " << this << std::endl;
   }
   
   descend_task(descend_task const&) = delete;
@@ -88,7 +89,7 @@ public:
     thread_local eigen_vector ray;
 
     update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
-    Logger() << "DESCEND-TASK STARTS: address = " << this << std::endl
+    LOG(INFO) << "DESCEND-TASK STARTS: address = " << this << std::endl
              << _ah << std::endl
              << "LOCATION: " << _location.transpose() << std::endl
              << "RAY: " << ray.transpose() << std::endl;
@@ -106,14 +107,14 @@ public:
     }
     auto & pos_offsets = idx_store;
     if (nn.first == nnvec.begin() or nn.second > 1.0) {
-      Logger() << "DESCEND SUCCESSFUL\n";
+      LOG(INFO) << "DESCEND SUCCESSFUL\n";
       auto & x = driver;
       assert(_ah.size() <= lambda.size());
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
       if (std::distance(pos_offsets.begin(), pos_end) == _ah.size()) {
-        Logger() << "WITHIN CONVEX HULL\n";
-        Logger() << "LOC = " << x.transpose() << std::endl;
+        LOG(INFO) << "WITHIN CONVEX HULL\n";
+        LOG(INFO) << "LOC = " << x.transpose() << std::endl;
         number_type const sq_dist = (x - _ah.pc()[*_ah.begin()]).squaredNorm();
         cp_type new_cp(_ah.begin(), _ah.end(), sq_dist, _succ);
         auto const insert_pair =  fc.insert(std::move(new_cp));
@@ -138,20 +139,20 @@ public:
           already_found_cp->add_successor(_succ);
         }
       } else {
-        Logger() << "ONLY AFFINE HULL\n";
+        LOG(INFO) << "ONLY AFFINE HULL\n";
         spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                            eigen_vector(x), _ah, _succ);
       }
       // handles both the critical and non-critical case
       using ci_type = circumsphere_ident<size_type>;
       if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {
-        Logger() << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
+        LOG(INFO) << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
         using at = ascend_task<point_cloud_type>;
-        Logger() << "t = " << nn.second << std::endl;
+        LOG(INFO) << "t = " << nn.second << std::endl;
         assert(nn.first == nnvec.begin());  // there is no stopper -> radius search
         ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
       } else {
-        Logger() << "NO ASCEND TO OTHER SIDE, BECAUSE "
+        LOG(INFO) << "NO ASCEND TO OTHER SIDE, BECAUSE "
                   << (_ah.size() == pc.dim() ? "ALREADY DESCENDED IN HERE\n"
                                              : "NO D-1 CRITICAL POINT\n");
       }
@@ -162,7 +163,7 @@ public:
       auto const& stopper_end = nn.first;
       for (auto it = stopper_begin; it != stopper_end; ++it) {  // TODO move last iteration
         size_type stopper = *it;
-        Logger() << "DESCEND GOT STOPPED by index: " << stopper << std::endl;
+        LOG(INFO) << "DESCEND GOT STOPPED by index: " << stopper << std::endl;
         auto new_ah(_ah);
         new_ah.append_point(stopper);
         assert(lambda.size() >= new_ah.size());

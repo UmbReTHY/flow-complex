@@ -12,7 +12,6 @@
 #include <Eigen/Core>
 
 #include "dynamic_qr.hpp"
-#include "logger.hpp"
 
 namespace FC {
 
@@ -33,22 +32,22 @@ public:
   
   affine_hull(point_cloud_type const& pc)
     : _dyn_qr(pc.dim()), _members(), _pc(pc) {
-    Logger() << "**AH-CTOR " << this << std::endl;
+    LOG(INFO) << "**AH-CTOR " << this << std::endl;
   }
   
   affine_hull(affine_hull const& orig)
     : _dyn_qr(orig._dyn_qr), _members(orig._members), _pc(orig._pc) {
-    Logger() << "**AH-COPY-CTOR " << this << std::endl;
+    LOG(INFO) << "**AH-COPY-CTOR " << this << std::endl;
   }
   
   affine_hull(affine_hull && tmp)
     : _dyn_qr(std::move(tmp._dyn_qr)), _members(std::move(tmp._members)),
       _pc(tmp._pc) {
-    Logger() << "**AH-MOVE-CTOR " << this << std::endl;
+    LOG(INFO) << "**AH-MOVE-CTOR " << this << std::endl;
   }
 
   ~affine_hull() {
-    Logger() << "**AH-DESTRUCT " << this << std::endl;
+    LOG(INFO) << "**AH-DESTRUCT " << this << std::endl;
   }
 
   affine_hull & operator=(affine_hull &&) = delete;

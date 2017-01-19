@@ -7,10 +7,9 @@
 #include <utility>
 
 #include <Eigen/Core>
+#include <glog/logging.h>
 
-#include "quadmath.hpp"
 #include "vertex_filter.hpp"
-#include "logger.hpp"
 
 namespace FC {
 
@@ -29,7 +28,7 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
                            Eigen::MatrixBase<Derived3> const& p,
                            vertex_filter<Params...> & get_next,
                            NNIterator begin, NNIterator end) {
-  Logger() << "NORM OF RAY " << v.squaredNorm() << std::endl;
+  LOG(INFO) << "NORM OF RAY " << v.squaredNorm() << std::endl;
   using number_type = typename Derived1::Scalar;
   // compute some values that don't depend on the candidate points
   number_type const x_p = x.dot(p);
@@ -45,9 +44,9 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
     if (0 == tmp)
       throw std::logic_error("division by 0");
     number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
-    Logger() << "t = " << t << " for id = " << q_idx << std::endl;
+    LOG(INFO) << "t = " << t << " for id = " << q_idx << std::endl;
     if (t > 0 and (r.first == begin or t <= r.second)) {
-      Logger() << "t-DIFF = " << (t - r.second) << std::endl;
+      LOG(INFO) << "t-DIFF = " << (t - r.second) << std::endl;
       if (r.first != begin and Eigen::internal::isApprox(t, r.second)) {
         if (r.first == end)
           throw std::logic_error("too many nearest neighbors");

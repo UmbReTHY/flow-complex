@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <ostream>
 
+#include <glog/logging.h>
 #include "affine_hull.hpp"
-#include "logger.hpp"
 
 namespace FC {
 
@@ -37,10 +37,10 @@ struct vertex_filter {
       return (member_end != std::find(member_begin, member_end, idx) or
               ignore_end != std::find(ignore_begin, ignore_end, idx));
     });
-    Logger() << "VERTEX-FILTER ctor: candidate indices = ";
+    LOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
     for (auto it = _current; it != _end; ++it)
-      Logger() << *it << ", ";
-    Logger() << std::endl;
+      LOG(INFO) << *it << ", ";
+    LOG(INFO) << std::endl;
   }
   
   /**
@@ -54,10 +54,10 @@ struct vertex_filter {
                 size_type ignore_idx, ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
     at_init(ah_member, v, member_begin, member_end, ignore_idx);
-    Logger() << "VERTEX-FILTER ctor: candidate indices = ";
+    LOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
     for (auto it = _current; it != _end; ++it)
-      Logger() << *it << ", ";
-    Logger() << std::endl;
+      LOG(INFO) << *it << ", ";
+    LOG(INFO) << std::endl;
   }
   
   /**
@@ -66,7 +66,7 @@ struct vertex_filter {
   template <class Derived>
   void reset(Eigen::MatrixBase<Derived> const& ray,
              affine_hull<PointCloud> const& ah, ResultIterator result_begin) {
-    Logger() << "reset vertex-filter\n";
+    LOG(INFO) << "reset vertex-filter\n";
     _current = result_begin; _end = result_begin;
     at_init(_pc[*ah.begin()], ray, ah.begin(), ah.end(), *ah.begin());
   }

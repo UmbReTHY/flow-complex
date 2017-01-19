@@ -12,7 +12,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
   set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set (CMAKE_CXX_FLAGS_RELEASE "-Wno-unused-parameter -DNDEBUG -O3")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
-  if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_definitions(-DLOGGING)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
@@ -34,6 +34,7 @@ option(BUILD_TESTS
 
 option(BUILD_EXAMPLES "" OFF)
 
+find_package (glog 0.3.4 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
 find_package(GooglePerfTools)

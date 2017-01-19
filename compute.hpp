@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include <glog/logging.h>
 #include <tbb/concurrent_unordered_set.h>
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_do.h>
@@ -12,7 +13,6 @@
 #include "ascend_task.hpp"
 #include "descend_task.hpp"
 #include "flow_complex.hpp"
-#include "logger.hpp"
 #include "point_cloud.hpp"
 #include "utility.hpp"
 #include "tbb.hpp"
@@ -28,7 +28,7 @@ flow_complex<typename base_t<decltype((*PointIterator())[0])>::type,
              size_type>
 compute_flow_complex (PointIterator begin, PointIterator end,
                       dim_type dim) {
-  Logger() << "*****************COMPUTE-START*************************\n";
+  LOG(INFO) << "*****************COMPUTE-START*************************\n";
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
   using pc_type = point_cloud<number_type, size_type, Aligned>;
