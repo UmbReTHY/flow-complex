@@ -107,10 +107,16 @@ public:
       _successors.push_back(succ);
   }
   
+  // this method is used by the cleansing tool only, and so far not in a multi-
+  // threaded fashion (therefore no mutex overhead).
+  // Instead of using std::vector::erase right away, this workaround is supposed
+  // to handle both standard library implementations (before and after C++11)
   void erase(self_type const* succ) {
-    auto it = std::find(succ_begin(), succ_end(), succ);
-    if (it != succ_end())
-      _successors.erase(it);
+    auto it = std::find(_successors.begin(), _successors.end(), succ);
+    if (it != succ_end()) {
+      std::swap(*it, _successors.back());
+      _successors.resize(_successors.size() - 1);
+    }
   }
   void erase(succ_iterator);
 
