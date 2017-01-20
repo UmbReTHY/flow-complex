@@ -99,7 +99,7 @@ public:
 
   template <typename Index>
   eigen_map const& operator[](Index idx) const {
-    assert(idx < _points.size());
+    DCHECK(typename pt_cont::size_type(idx) < _points.size());
     return _points[idx];
   }
   
@@ -129,15 +129,18 @@ public:
                              number_type(0),
                              false);
     bool nn_found = false;
-    for (size_type i = 0; i < _points.size(); ++i) {
-      number_type tmp = (q - _points[i]).squaredNorm();
-      if ((not nn_found) or (tmp < std::get<1>(r))) {
+    size_type pos = 0;
+    for (const auto& p : _points) {
+      const number_type tmp = (q - p).squaredNorm();
+      if (!nn_found || tmp < std::get<1>(r)) {
+        std::get<0>(r) = pos;
         std::get<1>(r) = tmp;
-        std::get<0>(r) = i;
+        std::get<2>(r) = false;
         nn_found = true;
       } else if (tmp == std::get<1>(r)) {
         std::get<2>(r) = true;
       }
+      ++pos;
     }
     return r;
   }

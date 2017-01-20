@@ -138,13 +138,13 @@ public:
         std::exit(EXIT_FAILURE);
       }
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
-        assert(_ah.size() == pc.dim());
+        DCHECK(_ah.size() == pc.dim());
         LOG(INFO) << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
         auto * inf_ptr = fc.max_at_inf();
         if (_dropped.first) {  // we dropped before flowing to infinity
           LOG(INFO) << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
-          assert(pos_offsets.size() >= _ah.size());
+          DCHECK(size_type(pos_offsets.size()) >= _ah.size());
           _ah.append_point(_dropped.second);  // append the dropped point
           using ci_type = circumsphere_ident<size_type>;
           if (cih(ci_type(_ah.begin(), _ah.end()))) { // avoid same inf descends

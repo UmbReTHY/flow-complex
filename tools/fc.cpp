@@ -24,7 +24,7 @@ int main(int argc, char ** argv) {
     if (not ps.size())
       throw std::invalid_argument("empty data sets");
 
-    using size_type = std::uint16_t;
+    using size_type = std::int64_t;
     size_type const dim = ps[0].size();
     auto fc = FC::compute_flow_complex<size_type>(ps.begin(), ps.end(), dim);
     if (not FC::validate(fc))
