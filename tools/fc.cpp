@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <cstdlib>
 
 #include <fstream>
 #include <iostream>
@@ -42,7 +41,8 @@ int main(int argc, char ** argv) {
     f << fc;
   } catch (std::exception & e) {
     std::cerr << e.what() << std::endl;
-    std::exit(EXIT_FAILURE);
+    return -1;
   }
-  std::exit(EXIT_SUCCESS);
+  return 0;
 }
+
