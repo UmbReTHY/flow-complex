@@ -6,24 +6,25 @@
 #include <stdexcept>
 #include <string>
 
+#include <gflags/gflags.h>
+
 #include "file_io.hpp"
 #include "compute.hpp"
 #include "clean.hpp"
 
+DEFINE_string(point_cloud, "", "path to file containing a point cloud");
+
 int main(int argc, char ** argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  CHECK(!FLAGS_point_cloud.empty()) << "point cloud file missing";
   try {
     using float_t = double;
-    if (argc != 2)
-      throw std::invalid_argument("usage: fc <point_cloud_file>");
-    auto * filename = argv[1];
-    std::ifstream in_file(filename);
-    if (not in_file)
-      throw std::runtime_error(std::string("could not open ") + filename);
+    std::ifstream in_file(FLAGS_point_cloud);
+    if (!in_file)
+      throw std::runtime_error("could not open " + FLAGS_point_cloud);
     FC::point_store<float_t> ps;
     in_file >> ps;
-    if (not ps.size())
-      throw std::invalid_argument("empty data sets");
-
+    if (0 == ps.size()) throw std::invalid_argument("empty data sets");
     using size_type = std::int64_t;
     size_type const dim = ps[0].size();
     auto fc = FC::compute_flow_complex<size_type>(ps.begin(), ps.end(), dim);
@@ -34,7 +35,7 @@ int main(int argc, char ** argv) {
     // cleansing
     fc = clean_incidences(std::move(fc));
     // printing
-    auto fc_filename = std::string(filename) + ".fc";
+    auto fc_filename = FLAGS_point_cloud + ".fc";
     std::ofstream f(fc_filename);
     if (not f)
       throw std::runtime_error("could not write to file " + fc_filename);

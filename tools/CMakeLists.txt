@@ -1,5 +1,7 @@
+find_package(gflags REQUIRED)
+
 add_executable(fc fc.cpp)
-target_link_libraries(fc ${TBB_LIBRARIES} glog::glog)
+target_link_libraries(fc ${TBB_LIBRARIES} glog::glog gflags)
 
 add_executable(perturb perturb.cpp)
 
