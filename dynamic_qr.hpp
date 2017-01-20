@@ -37,7 +37,7 @@ public:
     : _q(eigen_mat::Identity(num_rows, num_rows)),
       _r_raw(new number_type[num_rows * num_rows]),
       _r_begin(new number_type * [num_rows]), _r_end(_r_begin) {
-    LOG(INFO) << "**QR-CTOR " << this << std::endl;
+    DLOG(INFO) << "**QR-CTOR " << this << std::endl;
     assert(num_rows > 0);
     std::vector<size_type> offsets(num_rows);
     std::iota(offsets.begin(), offsets.end(), 0);
@@ -50,7 +50,7 @@ public:
     : _q(orig._q), _r_raw(nullptr),
       _r_begin(new number_type * [orig.num_rows()]),
       _r_end(_r_begin + orig.num_cols()) {
-    LOG(INFO) << "**QR-COPY-CTOR " << this << std::endl;
+    DLOG(INFO) << "**QR-COPY-CTOR " << this << std::endl;
     size_type const num_elements = orig.num_rows() * orig.num_rows();
     _r_raw = new number_type[num_elements];
 
@@ -72,7 +72,7 @@ public:
   // move-constructor
   dynamic_qr(dynamic_qr && tmp)
     : _q(), _r_raw(tmp._r_raw), _r_begin(tmp._r_begin), _r_end(tmp._r_end) {
-    LOG(INFO) << "**QR-MOVE-CTOR " << this << std::endl;
+    DLOG(INFO) << "**QR-MOVE-CTOR " << this << std::endl;
     _q.swap(tmp._q);
     // ownership has been transferred
     tmp._r_raw = nullptr;
@@ -81,7 +81,7 @@ public:
   
   // move-assignment
   dynamic_qr & operator=(dynamic_qr && tmp) {
-    LOG(INFO) << "**QR-MOVE-ASSIGN " << this << std::endl;
+    DLOG(INFO) << "**QR-MOVE-ASSIGN " << this << std::endl;
     if (this != &tmp) {
       _q.swap(tmp._q);
       _r_raw = tmp._r_raw;
@@ -196,7 +196,7 @@ public:
   }
   
   ~dynamic_qr() {
-    LOG(INFO) << "**QR-DESTRUCT " << this << std::endl;
+    DLOG(INFO) << "**QR-DESTRUCT " << this << std::endl;
     if (_r_begin) {
       delete[] _r_begin;
       _r_begin = nullptr;

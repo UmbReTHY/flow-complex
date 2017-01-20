@@ -41,7 +41,7 @@ public:
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist)
     : _indices(idx_begin, idx_end), _sq_dist(sq_dist) {
-    LOG(INFO) << "**CP-CTOR: " << this << std::endl;
+    DLOG(INFO) << "**CP-CTOR: " << this << std::endl;
     std::sort(_indices.begin(), _indices.end());
   }
   
@@ -50,7 +50,7 @@ public:
   critical_point(IdxIterator idx_begin, IdxIterator idx_end,
                  number_type sq_dist, self_type * succ)
     : critical_point(idx_begin, idx_end, std::move(sq_dist)) {
-    LOG(INFO) << "**CP-CTOR: " << this << std::endl;
+    DLOG(INFO) << "**CP-CTOR: " << this << std::endl;
     assert(succ);
     _successors.push_back(succ);
   }
@@ -58,13 +58,13 @@ public:
   // constructor for cp at inf
   critical_point(size_type index)
     : _index(index) {
-    LOG(INFO) << "**CP-INF-CTOR: " << this << std::endl;
+    DLOG(INFO) << "**CP-INF-CTOR: " << this << std::endl;
   }
 
   // constructors and assignment-operators
   critical_point(critical_point && tmp) : _indices(std::move(tmp._indices)),
     _successors(std::move(tmp._successors)) {
-    LOG(INFO) << "**CP-MOVE-CTOR: " << this << std::endl;
+    DLOG(INFO) << "**CP-MOVE-CTOR: " << this << std::endl;
     if (is_max_at_inf())
       _index = std::move(tmp._index);
     else

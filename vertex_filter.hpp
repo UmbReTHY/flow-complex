@@ -37,10 +37,10 @@ struct vertex_filter {
       return (member_end != std::find(member_begin, member_end, idx) or
               ignore_end != std::find(ignore_begin, ignore_end, idx));
     });
-    LOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
+    DLOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
     for (auto it = _current; it != _end; ++it)
-      LOG(INFO) << *it << ", ";
-    LOG(INFO) << std::endl;
+      DLOG(INFO) << *it << ", ";
+    DLOG(INFO) << std::endl;
   }
   
   /**
@@ -54,10 +54,10 @@ struct vertex_filter {
                 size_type ignore_idx, ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
     at_init(ah_member, v, member_begin, member_end, ignore_idx);
-    LOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
+    DLOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
     for (auto it = _current; it != _end; ++it)
-      LOG(INFO) << *it << ", ";
-    LOG(INFO) << std::endl;
+      DLOG(INFO) << *it << ", ";
+    DLOG(INFO) << std::endl;
   }
   
   /**
@@ -66,7 +66,7 @@ struct vertex_filter {
   template <class Derived>
   void reset(Eigen::MatrixBase<Derived> const& ray,
              affine_hull<PointCloud> const& ah, ResultIterator result_begin) {
-    LOG(INFO) << "reset vertex-filter\n";
+    DLOG(INFO) << "reset vertex-filter\n";
     _current = result_begin; _end = result_begin;
     at_init(_pc[*ah.begin()], ray, ah.begin(), ah.end(), *ah.begin());
   }

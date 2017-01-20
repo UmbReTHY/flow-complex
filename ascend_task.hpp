@@ -43,7 +43,7 @@ public:
   */
   ascend_task(point_cloud_type const& pc)
     : _ah(pc), _location(pc.dim()), _ray(pc.dim()), _dropped(false, 0) {
-    LOG(INFO) << "***AT-CTOR: " << this << std::endl;
+    DLOG(INFO) << "***AT-CTOR: " << this << std::endl;
     std::tuple<size_type, number_type, bool> nn;
     // reseed as long as the nearest neighbor is not unique
     do {
@@ -64,7 +64,7 @@ public:
               eigen_vector && ray,
               size_type dropped_idx)
   : _ah(std::move(ah)), _location(), _ray(), _dropped(true, dropped_idx) {
-    LOG(INFO) << "***AT-CTOR: " << this << std::endl;
+    DLOG(INFO) << "***AT-CTOR: " << this << std::endl;
     assert(_ah.size() == _ah.pc().dim());
     _location.swap(location);
     _ray.swap(ray);
@@ -82,17 +82,17 @@ public:
   
   ascend_task (ascend_task && tmp)
     : _ah(std::move(tmp._ah)), _location(), _ray(), _dropped(tmp._dropped) {
-    LOG(INFO) << "***AT-MOVE-CTOR: " << this << std::endl;
+    DLOG(INFO) << "***AT-MOVE-CTOR: " << this << std::endl;
     _location.swap(tmp._location);
     _ray.swap(tmp._ray);
   }
   
   ~ascend_task() {
-    LOG(INFO) << "***AT-DESTRUCT: " << this << std::endl;
+    DLOG(INFO) << "***AT-DESTRUCT: " << this << std::endl;
   }
 
   ascend_task & operator=(ascend_task && tmp) {
-    LOG(INFO) << "***AT-MOVE-ASSIGN: " << this << std::endl;
+    DLOG(INFO) << "***AT-MOVE-ASSIGN: " << this << std::endl;
     if (this != &tmp) {
       _ah = std::move(tmp._ah);
       _location.swap(tmp._location);
@@ -122,10 +122,10 @@ public:
                              idx_store.begin());
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     
-    LOG(INFO) << "ASCEND-TASK-STARTS\n";
+    DLOG(INFO) << "ASCEND-TASK-STARTS\n";
     do {
       try {
-        LOG(INFO) << _ah << std::endl
+        DLOG(INFO) << _ah << std::endl
                  << "LOCATION = " << _location.transpose() << std::endl
                  << "DRIVER = " << driver.transpose() << std::endl
                  << "RAY = " << _ray.transpose() << std::endl;
@@ -139,10 +139,10 @@ public:
       }
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         DCHECK(_ah.size() == pc.dim());
-        LOG(INFO) << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
+        DLOG(INFO) << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
         auto * inf_ptr = fc.max_at_inf();
         if (_dropped.first) {  // we dropped before flowing to infinity
-          LOG(INFO) << "DROPPED BEFORE FLOW TO INF\n";
+          DLOG(INFO) << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
           DCHECK(size_type(pos_offsets.size()) >= _ah.size());
           _ah.append_point(_dropped.second);  // append the dropped point
@@ -157,7 +157,7 @@ public:
            // in which case we don't need to descend back
         break;  // EXIT 1
       } else {
-        LOG(INFO) << "STOPPER FOUND\n";
+        DLOG(INFO) << "STOPPER FOUND\n";
         _location += nn.second * _ray;
         for (auto it = nnvec.begin(); it != nn.first; ++it)
           _ah.append_point(*it);
@@ -168,7 +168,7 @@ public:
                               fc, ath, dth);
           break;  // EXIT 2
         } else {
-          LOG(INFO) << "NOT MAX YET - NEED TO CLIMB\n";
+          DLOG(INFO) << "NOT MAX YET - NEED TO CLIMB\n";
           update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
                                            driver, _ray);
         }
@@ -176,7 +176,7 @@ public:
       // make vf consider all ambient points again on subsequent calls
       vf.reset(_ray, _ah, idx_store.begin());
     } while(true);
-    LOG(INFO) << "***AT-COMPLETE***\n";
+    DLOG(INFO) << "***AT-COMPLETE***\n";
   }
   
 private:
@@ -193,7 +193,7 @@ private:
     using Float = float;
     std::random_device rd;
     int seed = rd();
-    LOG(INFO) << "seed = " << seed << std::endl;
+    DLOG(INFO) << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
     std::uniform_int_distribution<size_type> rand_idx(0, pc.size() - 1);
@@ -236,13 +236,13 @@ private:
     auto & ray = _ray;
     assert(ah.size() == (pc.dim() + 1));
     assert(std::distance(begin, end) >= pc.dim() + 1);
-    LOG(INFO) << "FINITE MAX SUSPECT\n";
+    DLOG(INFO) << "FINITE MAX SUSPECT\n";
     assert(lambda.size() == ah.size());
     ah.project(x, lambda);
-    LOG(INFO) << "lambda = " << lambda.head(ah.size()).transpose() << std::endl;
+    DLOG(INFO) << "lambda = " << lambda.head(ah.size()).transpose() << std::endl;
     auto const neg_end = get_neg_offsets(lambda, begin);
     if (begin == neg_end) {  // no points negative
-      LOG(INFO) << "FINITE MAX INDEED\n"
+      DLOG(INFO) << "FINITE MAX INDEED\n"
                << "MAX-LOC " << x.transpose() << std::endl;
       number_type sq_dist((x - pc[*ah.begin()]).squaredNorm());
       using cp_type = typename fc_type::cp_type;
@@ -255,7 +255,7 @@ private:
                            max_ptr);
       }
     } else {
-      LOG(INFO) << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
+      DLOG(INFO) << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
       size_type dropped_idx;
       for (auto it = begin; it != neg_end; ++it) {
         auto new_ah(ah);
@@ -264,7 +264,7 @@ private:
         update_ray<RAY_DIR::FROM_DRIVER>(new_ah, x, lambda, driver, ray);
         using ev = eigen_vector;
         using at = self_t;
-        LOG(INFO) << "NEW TASK: " << new_ah << std::endl
+        DLOG(INFO) << "NEW TASK: " << new_ah << std::endl
                  << "DROPPED IDX = " << dropped_idx << std::endl;
         ath(at(std::move(new_ah), ev(x), ev(ray), dropped_idx));
       }

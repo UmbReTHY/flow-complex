@@ -32,22 +32,22 @@ public:
   
   affine_hull(point_cloud_type const& pc)
     : _dyn_qr(pc.dim()), _members(), _pc(pc) {
-    LOG(INFO) << "**AH-CTOR " << this << std::endl;
+    DLOG(INFO) << "**AH-CTOR " << this << std::endl;
   }
   
   affine_hull(affine_hull const& orig)
     : _dyn_qr(orig._dyn_qr), _members(orig._members), _pc(orig._pc) {
-    LOG(INFO) << "**AH-COPY-CTOR " << this << std::endl;
+    DLOG(INFO) << "**AH-COPY-CTOR " << this << std::endl;
   }
   
   affine_hull(affine_hull && tmp)
     : _dyn_qr(std::move(tmp._dyn_qr)), _members(std::move(tmp._members)),
       _pc(tmp._pc) {
-    LOG(INFO) << "**AH-MOVE-CTOR " << this << std::endl;
+    DLOG(INFO) << "**AH-MOVE-CTOR " << this << std::endl;
   }
 
   ~affine_hull() {
-    LOG(INFO) << "**AH-DESTRUCT " << this << std::endl;
+    DLOG(INFO) << "**AH-DESTRUCT " << this << std::endl;
   }
 
   affine_hull & operator=(affine_hull &&) = delete;

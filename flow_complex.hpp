@@ -53,7 +53,7 @@ using self_t = flow_complex<_number_type, _size_type>;
     flow_complex(flow_complex const&) = delete;
     flow_complex(flow_complex && tmp)
     : _max_at_inf(tmp._max_at_inf), _cps(), _minima(std::move(tmp._minima)) {
-      LOG(INFO) << "FC-MOVE-CTOR\n";
+      DLOG(INFO) << "FC-MOVE-CTOR\n";
       _cps.swap(tmp._cps);
     }
     // copy- and move-assign
@@ -106,9 +106,9 @@ using self_t = flow_complex<_number_type, _size_type>;
       r.first =   ret_pair.second;
       r.second = &*ret_pair.first;
       if (r.first)
-        LOG(INFO) << "CRITICAL POINT IS NEW!\n";
+        DLOG(INFO) << "CRITICAL POINT IS NEW!\n";
       else
-        LOG(INFO) << "CRITICAL POINT WAS FOUND ALREADY\n";
+        DLOG(INFO) << "CRITICAL POINT WAS FOUND ALREADY\n";
       return r;
     }
     

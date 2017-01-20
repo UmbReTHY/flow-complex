@@ -81,12 +81,12 @@ void spawn_sub_descends(DTHandler & dth,
     std::copy_if(ah.begin(), ah.end(), newidx.begin(),
                  [dropped_idx](size_type idx) {return idx != dropped_idx;});
     if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
-      LOG(INFO) << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
+      DLOG(INFO) << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
       existing_cp->add_successor(succ);
     } else {
       auto new_ah(ah);
       new_ah.drop_point(new_ah.begin() + *it);
-      LOG(INFO) << "DT takes dropped idx = " << dropped_idx << std::endl;
+      DLOG(INFO) << "DT takes dropped idx = " << dropped_idx << std::endl;
       using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
       dt_type dt(std::move(new_ah), eigen_vector(x), succ,
                  ignore_begin, ignore_end);
@@ -100,10 +100,10 @@ void spawn_sub_descends(DTHandler & dth,
   std::copy_if(ah.begin(), ah.end(), newidx.begin(),
                [dropped_idx](size_type idx) {return idx != dropped_idx;});
   if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
-    LOG(INFO) << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
+    DLOG(INFO) << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
     existing_cp->add_successor(succ);
   } else {
-    LOG(INFO) << "DT takes dropped idx = " << dropped_idx << std::endl;
+    DLOG(INFO) << "DT takes dropped idx = " << dropped_idx << std::endl;
     using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
     ah.drop_point(ah.begin() + *drop_pos_begin);
     dt_type dt(std::move(ah), eigen_vector(x), succ, ignore_begin, ignore_end);
