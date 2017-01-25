@@ -116,27 +116,28 @@ public:
     // there's only 2 cases of ascend tasks: completely new, and those starting
     // with d points on the boundary. The first case has not dropped yet, the
     // 2nd case has always dropped before
-    assert(_ah.size() == 1 or _ah.size() == pc.dim());
-    auto vf = make_at_filter(_ah, _ray,
-                             (_dropped.first ? _dropped.second : *_ah.begin()),
-                             idx_store.begin());
+    DCHECK(_ah.size() == 1 or _ah.size() == pc.dim());
+//    auto vf = make_at_filter(_ah, _ray,
+//                             (_dropped.first ? _dropped.second : *_ah.begin()),
+//                             idx_store.begin());
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     
     DLOG(INFO) << "ASCEND-TASK-STARTS\n";
     do {
-      try {
-        DLOG(INFO) << _ah << std::endl
-                 << "LOCATION = " << _location.transpose() << std::endl
-                 << "DRIVER = " << driver.transpose() << std::endl
-                 << "RAY = " << _ray.transpose() << std::endl;
-        auto const max_nn = pc.dim() + 1 - _ah.size();
-        nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
-                                        vf, nnvec.begin(),
-                                        std::next(nnvec.begin(), max_nn));
-      } catch(std::exception & e) {
-        std::cerr << "ASCEND-TASK error: " << e.what() << std::endl;
-        std::exit(EXIT_FAILURE);
-      }
+      auto ignoreFn = [this](size_type idx) {
+        return (_ah.end() != std::find(_ah.begin(), _ah.end(), idx)) ||
+               (_dropped.first && idx == _dropped.second);
+      };
+      vertex_filter<point_cloud_t, typename std::vector<size_type>::iterator>
+      vf(pc, _location, _ray, pc[*_ah.begin()], ignoreFn, idx_store.begin());
+      DLOG(INFO) << _ah << std::endl
+               << "LOCATION = " << _location.transpose() << std::endl
+               << "DRIVER = " << driver.transpose() << std::endl
+               << "RAY = " << _ray.transpose() << std::endl;
+      auto const max_nn = pc.dim() + 1 - _ah.size();
+      nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
+                                      vf, nnvec.begin(),
+                                      std::next(nnvec.begin(), max_nn));
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         DCHECK(_ah.size() == pc.dim());
         DLOG(INFO) << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
@@ -174,7 +175,7 @@ public:
         }
       }
       // make vf consider all ambient points again on subsequent calls
-      vf.reset(_ray, _ah, idx_store.begin());
+//      vf.reset(_ray, _ah, idx_store.begin());
     } while(true);
     DLOG(INFO) << "***AT-COMPLETE***\n";
   }

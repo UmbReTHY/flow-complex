@@ -79,7 +79,7 @@ public:
   */
   template <typename Iterator, typename dim_type>
   point_cloud(Iterator begin, Iterator end, dim_type dim)
-  : _points(), _data_adaptor(*this), _kd_tree(nullptr) {
+  : _points(), _data_adaptor(*this), _kd_tree(nullptr), diameter_(0.0) {
     auto const size = std::distance(begin, end);
     _points.reserve(size);
     for (auto it = begin; it != end; ++it)
@@ -87,6 +87,14 @@ public:
     using Params = nanoflann::KDTreeSingleIndexAdaptorParams;
     _kd_tree.reset(new KDTree(dim, _data_adaptor, Params(15)));
     _kd_tree->buildIndex();
+    // compute diameter of dataset
+    for (const auto& u : _points) {
+      for (const auto& v : _points) {
+        const double sq_distance = (u-v).squaredNorm();
+        if (sq_distance > diameter_) diameter_ = sq_distance;
+      }
+    }
+    diameter_ = std::sqrt(diameter_);
   }
   
   iterator begin() const noexcept {
@@ -111,6 +119,8 @@ public:
   size_type size() const noexcept {
     return _points.size();
   }
+  
+  number_type diameter() const {return diameter_;}
   
   /**
     @brief Finds the nearest neighbor to q. In case of more than one nearest
@@ -193,6 +203,7 @@ private:
   pt_cont                       _points;
   DataAdaptor             _data_adaptor;
   std::unique_ptr<KDTree>      _kd_tree;
+  _number_type                diameter_;
 };
 
 }  // namespace FC

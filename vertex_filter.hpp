@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <functional>
 #include <ostream>
 
 #include <glog/logging.h>
@@ -42,33 +43,47 @@ struct vertex_filter {
       DLOG(INFO) << *it << ", ";
     DLOG(INFO) << std::endl;
   }
-  
+
   /**
     @brief for ascend tasks
   */
-  template <class Derived1, class Derived2, class MemberIterator>
+  template <typename Derived1, typename Derived2, typename Derived3>
   vertex_filter(PointCloud const& pc,
-                Eigen::MatrixBase<Derived1> const& ah_member,
-                Eigen::MatrixBase<Derived2> const& v,
-                MemberIterator member_begin, MemberIterator member_end,
-                size_type ignore_idx, ResultIterator result_begin)
+                Eigen::MatrixBase<Derived1> const& location,
+                Eigen::MatrixBase<Derived2> const& direction,
+                Eigen::MatrixBase<Derived3> const& point_on_sphere,
+                std::function<bool(size_type)> ignoreFn,
+                ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
-    at_init(ah_member, v, member_begin, member_end, ignore_idx);
-    DLOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
-    for (auto it = _current; it != _end; ++it)
-      DLOG(INFO) << *it << ", ";
-    DLOG(INFO) << std::endl;
-  }
-  
-  /**
-    @brief only called by ascend tasks
-  */
-  template <class Derived>
-  void reset(Eigen::MatrixBase<Derived> const& ray,
-             affine_hull<PointCloud> const& ah, ResultIterator result_begin) {
-    DLOG(INFO) << "reset vertex-filter\n";
-    _current = result_begin; _end = result_begin;
-    at_init(_pc[*ah.begin()], ray, ah.begin(), ah.end(), *ah.begin());
+    using number_type = typename Derived1::Scalar;
+    using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
+    size_type num_iter = 0;
+    const double sq_diameter = pc.diameter() * pc.diameter();
+    double sq_radius;
+    // TODO insert approx check about direction.Norm() being almost 0
+    // probe for candidate stoppers by increasing the probing sphere
+    // exponentially until we exceed the diameter of the dataset
+    do {
+      eigen_vector new_location = location + std::exp2(num_iter) * direction;
+      sq_radius = (new_location - point_on_sphere).squaredNorm();
+      _end = pc.radius_search(new_location, sq_radius, _current);
+      _end = std::remove_if(_current, _end, ignoreFn);
+      ++num_iter;
+    } while(_end == _current && sq_radius < sq_diameter);
+    // if we increased the probing sphere all the way to the diameter of the
+    // dataset and still didn't find any containing points, it is likely we are
+    // on the boundary floating to infinity, but still, it is technically 
+    // possible we pick up a point very far outside because of a sliver, so we
+    // have to check all points of the dataset, to be safe
+    // TODO this is a heuristic: we skip the scanning of all points if the
+    //      probing above didn't find any candidates. Id definitely speeds up
+    //      the code, but there could be edge cases where this fails to be
+    //      correct
+//    if (_end == _current) {
+//      _end = std::next(_current, pc.size());
+//      std::iota(_current, _end, 0);
+//      _end = std::remove_if(_current, _end, ignoreFn);
+//    }
   }
   
   eigen_map const* operator()(size_type * idx_ptr) {
@@ -84,38 +99,11 @@ struct vertex_filter {
   }
   
 private:
-  template <class Derived1, class Derived2, class MemberIterator>
-  void at_init(Eigen::MatrixBase<Derived1> const& ah_member,
-               Eigen::MatrixBase<Derived2> const& v,
-               MemberIterator member_begin, MemberIterator member_end,
-               size_type ignore_idx) {
-    using float_t = typename PointCloud::number_type;
-    // precomputed values
-    float_t const vdota = v.dot(ah_member);
-    for (size_type i = 0; i < _pc.size(); ++i) {
-      if ((v.dot(_pc[i]) - vdota) > 0 and
-          member_end == std::find(member_begin, member_end, i) and
-          i != ignore_idx)
-        *(_end++) = i;
-    }
-  }
 
   PointCloud const& _pc;
   ResultIterator    _current;
   ResultIterator    _end;
 };
-
-// helper function
-template <typename PointCloud, class Iterator, class Derived>
-vertex_filter<PointCloud, Iterator>
-make_at_filter(affine_hull<PointCloud> const& ah,
-               Eigen::MatrixBase<Derived> const& ray,
-               typename PointCloud::size_type ignore_idx,
-               Iterator result_begin) {
-  using vf_type = vertex_filter<PointCloud, Iterator>;
-  return vf_type(ah.pc(), ah.pc()[*ah.begin()], ray,
-                 ah.begin(), ah.end(), ignore_idx, result_begin);
-}
 
 template <class PointCloud, class Iterator, class Derived, class Iterator2>
 vertex_filter<PointCloud, Iterator>
