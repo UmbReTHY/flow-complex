@@ -8,11 +8,14 @@
 
 #include <gflags/gflags.h>
 
-#include "file_io.hpp"
-#include "compute.hpp"
 #include "clean.hpp"
+#include "compute.hpp"
+#include "file_io.hpp"
+#include "flow_complex.hpp"
 
 DEFINE_string(point_cloud, "", "path to file containing a point cloud");
+DEFINE_bool(hist, false, "flag to toggle a print of the histogram of"
+                         " computed critical points");
 
 int main(int argc, char ** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -32,6 +35,12 @@ int main(int argc, char ** argv) {
       std::cout << "warning: the computed flow complex is not valid. "
                    "This is probably the result of numerical inaccuracies or "
                    "degenerate input\n";
+    if (FLAGS_hist) {
+      std::cout << "** printing histogram **" << std::endl;
+      std::cout << "index\tcount" << std::endl;
+      for (const auto& cp_pair : FC::compute_hist(fc))
+        std::cout << cp_pair.first << "\t" << cp_pair.second << std::endl;
+    }
     // cleansing
     fc = clean_incidences(std::move(fc));
     // printing
