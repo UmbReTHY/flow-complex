@@ -39,22 +39,30 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
   typename vertex_filter<Params...>::size_type q_idx;
   auto * q_ptr = get_next(&q_idx);
   while (q_ptr) {
+    DLOG(INFO) << "idx probed for stopper in nn-along-ray: " << q_idx << std::endl;
     auto & q = *q_ptr;
     number_type const tmp = (v_p - q.dot(v));
-    if (0 == tmp)
-      throw std::logic_error("division by 0");
-    number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
-    DLOG(INFO) << "t = " << t << " for id = " << q_idx << std::endl;
-    if (t > 0 and (r.first == begin or t <= r.second)) {
-      DLOG(INFO) << "t-DIFF = " << (t - r.second) << std::endl;
-      if (r.first != begin and Eigen::internal::isApprox(t, r.second)) {
-        if (r.first == end)
-          throw std::logic_error("too many nearest neighbors");
-      } else {
-        r.first = begin;
-        r.second = t;
+    // if this happens, q is on the boundary of a ball with center
+    // x := x + t * v and t := infinity
+    // during ascend this is no problem
+    // 1) if it only happens at infinity, then we flow to the max at inf as our
+    //    sucessors
+    // 2) if we accpet that, and flow back, then only at infinity do we he have
+    //    q on our boundary, not at the proxy where we proceed during descend
+    if (!Eigen::internal::isApprox(tmp, number_type(0.0))) {
+      number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
+      DLOG(INFO) << "t = " << t << " for id = " << q_idx << std::endl;
+      if (t > 0 and (r.first == begin or t <= r.second)) {
+        DLOG(INFO) << "t-DIFF = " << (t - r.second) << std::endl;
+        if (r.first != begin and Eigen::internal::isApprox(t, r.second)) {
+          if (r.first == end)
+            throw std::logic_error("too many nearest neighbors");
+        } else {
+          r.first = begin;
+          r.second = t;
+        }
+        *r.first++ = q_idx;
       }
-      *r.first++ = q_idx;
     }
     q_ptr = get_next(&q_idx);
   }
