@@ -54,8 +54,9 @@ public:
   affine_hull & operator=(affine_hull const&) = delete;
   
   void append_point(size_type const idx) {
-    assert(not is_member(std::find(_members.begin(), _members.end(), idx)));
-    assert(size() <= _pc.dim());
+    DCHECK(_members.end() == std::find(_members.begin(), _members.end(), idx))
+    << "added a point to the affine hull that was already contained: " << idx;
+    DCHECK(size() <= _pc.dim()) << "added more than d+1 points to affine hull";
     // it requires an idx that serves as the origin for adding a column
     if (size() > 0)
       _dyn_qr.append_column(_pc[idx] - _pc[_members.front()]);
@@ -66,7 +67,8 @@ public:
     @brief invalidates all iterators at and after it
   */
   void drop_point(const_iterator it) {
-    assert(is_member(it));
+    DLOG(INFO) << "dropping point " << *it;
+    DCHECK(is_member(it));
     if (_members.size() > 1) {
       bool const del_orig = _members.begin() == it;
       _dyn_qr.delete_column(del_orig ? 0 : // gets deleted because the point
@@ -88,8 +90,8 @@ public:
     auto mutable_it = std::next(_members.begin(), del_pos);
     std::rotate(mutable_it, std::next(mutable_it), _members.end());
     _members.resize(_members.size() - 1);
-    assert((_members.empty() && _dyn_qr.num_cols() == 0) ||
-           _members.size() == _dyn_qr.num_cols() + 1);
+    DCHECK((_members.empty() && _dyn_qr.num_cols() == 0) ||
+           (_members.size() == _dyn_qr.num_cols() + 1));
   }
   
   /**

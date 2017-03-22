@@ -170,7 +170,7 @@ std::ostream & operator<<(std::ostream & os, flow_complex<nt, st> const& fc) {
       os << cp;
       os << "| ";
       os << std::setprecision(std::numeric_limits<out_nt>::digits10)
-         << out_nt(std::sqrt(cp.sq_dist()));
+         << out_nt(sqrt(cp.sq_dist()));
       os << " ";
       for (auto it = cp.succ_begin(); it != cp.succ_end(); ++it)
         os << "| " << **it;

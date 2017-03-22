@@ -21,6 +21,17 @@
 
 namespace FC {
 
+/**
+  @brief given a Vector lambda, write all positions i into the range starting
+         at cond_begin where lambda[i] satisfies a certain predicate
+         cond(lambda[i])
+         
+         Note: The indices are guaranteed to be written in DECREASING order.
+               The reason for that is that when manipulating a range using
+               the offsets returned form this function, doing so in back to
+               front fashion will not affect the offsets smaller than the
+               currently processed one.
+*/
 template <class Derived, class Iterator, class Condition>
 Iterator get_cond_offsets(Eigen::MatrixBase<Derived> const& lambda,
                           Iterator cond_begin, Condition cond) {
@@ -71,13 +82,13 @@ void spawn_sub_descends(DTHandler & dth,
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;
   // we skip the first position to use it as the "move-case" after the loop
-  assert(drop_pos_begin != drop_pos_end);
+  DCHECK(drop_pos_begin != drop_pos_end);
   cp_type * existing_cp = nullptr;
   // stores the indices for cp creation - this avoids creating a whole
   // affine hull, in case existing_cp != nullptr
   std::vector<size_type> newidx(ah.size() - 1);
-  for (Iterator it = std::next(drop_pos_begin); it != drop_pos_end; ++it) {
-    auto const dropped_idx = *(ah.begin() + *it);
+  for (auto it = drop_pos_begin; it != drop_pos_end; ++it) {
+    const auto dropped_idx = *(ah.begin() + *it);
     std::copy_if(ah.begin(), ah.end(), newidx.begin(),
                  [dropped_idx](size_type idx) {return idx != dropped_idx;});
     if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
@@ -93,22 +104,6 @@ void spawn_sub_descends(DTHandler & dth,
       dt.add_ignore_idx(dropped_idx);
       dth(std::move(dt));
     }
-  }
-  // move-case for "first" (skipped) iteration
-  // same loop body, except that we can move ah, instead of creating a copy of it
-  size_type const dropped_idx = *(ah.begin() + *drop_pos_begin);
-  std::copy_if(ah.begin(), ah.end(), newidx.begin(),
-               [dropped_idx](size_type idx) {return idx != dropped_idx;});
-  if ((existing_cp = fc.find(cp_type(newidx.begin(), newidx.end(), 0)))) {
-    DLOG(INFO) << "CP ALREADY FOUND - NO DT SPAWNED,SUCCS UPDATED\n";
-    existing_cp->add_successor(succ);
-  } else {
-    DLOG(INFO) << "DT takes dropped idx = " << dropped_idx << std::endl;
-    using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-    ah.drop_point(ah.begin() + *drop_pos_begin);
-    dt_type dt(std::move(ah), eigen_vector(x), succ, ignore_begin, ignore_end);
-    dt.add_ignore_idx(dropped_idx);
-    dth(std::move(dt));
   }
 }
 

@@ -13,9 +13,13 @@
 #include "file_io.hpp"
 #include "flow_complex.hpp"
 
+#include <boost/multiprecision/cpp_dec_float.hpp>
+namespace mp = boost::multiprecision;
+
 DEFINE_string(point_cloud, "", "path to file containing a point cloud");
 DEFINE_bool(hist, false, "flag to toggle a print of the histogram of"
                          " computed critical points");
+DEFINE_int32(num_threads, -1, "number of threads to use");
 
 int main(int argc, char ** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -30,7 +34,8 @@ int main(int argc, char ** argv) {
     if (0 == ps.size()) throw std::invalid_argument("empty data sets");
     using size_type = std::int64_t;
     size_type const dim = ps[0].size();
-    auto fc = FC::compute_flow_complex<size_type>(ps.begin(), ps.end(), dim);
+    auto fc = FC::compute_flow_complex<size_type>(ps.begin(), ps.end(), dim,
+                                                  FLAGS_num_threads);
     if (not FC::validate(fc))
       std::cout << "warning: the computed flow complex is not valid. "
                    "This is probably the result of numerical inaccuracies or "

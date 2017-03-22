@@ -42,7 +42,8 @@ public:
     @brief use this constructor, to spawn an ascend_task at a random position
   */
   ascend_task(point_cloud_type const& pc)
-    : _ah(pc), _location(pc.dim()), _ray(pc.dim()), _dropped(false, 0) {
+    : _ah(pc), _location(pc.dim()), _ray(pc.dim())
+    {
     DLOG(INFO) << "***AT-CTOR: " << this << std::endl;
     std::tuple<size_type, number_type, bool> nn;
     // reseed as long as the nearest neighbor is not unique
@@ -56,28 +57,16 @@ public:
     _ray = _location - pc[*_ah.begin()];
   }
   
-  /**
-    @brief spawn an ascend task that upflows from a d-1 Delaunay facet
-  */
-  ascend_task(affine_hull<point_cloud_type> ah,
-              eigen_vector && location,
-              eigen_vector && ray,
-              size_type dropped_idx)
-  : _ah(std::move(ah)), _location(), _ray(), _dropped(true, dropped_idx) {
-    DLOG(INFO) << "***AT-CTOR: " << this << std::endl;
-    assert(_ah.size() == _ah.pc().dim());
-    _location.swap(location);
-    _ray.swap(ray);
-  }
-  
     /**
     @brief spawn an ascend task that upflows from a d-1 Delaunay facet
   */
   ascend_task(affine_hull<point_cloud_type> ah,
               eigen_vector && location,
               eigen_vector && ray)
-  : ascend_task(std::move(ah), std::move(location), std::move(ray), 0) {
-    _dropped.first = false;
+  : _ah(std::move(ah)), _location(), _ray() {
+  DCHECK(_ah.size() == _ah.pc().dim()) << "ctor only for d-1 facet ascends";
+    _location.swap(location);
+    _ray.swap(ray);
   }
   
   ascend_task (ascend_task && tmp)
@@ -105,28 +94,28 @@ public:
   ascend_task (ascend_task const&) = delete;
   ascend_task & operator=(ascend_task const&) = delete;
   
+  // TODO ascend task handler not needed anymore
   template <class DTHandler, class ATHandler, class CIHandler>
-  void execute(ATHandler & ath, DTHandler & dth, fc_type & fc,
+  void execute(ATHandler &, DTHandler & dth, fc_type & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
-    thread_local std::vector<size_type> nnvec(pc.dim() + 1);
-    thread_local std::vector<size_type> idx_store(pc.size());
-    thread_local eigen_vector driver(pc.dim());
-    thread_local eigen_vector lambda(pc.dim() + 1);
+    std::vector<size_type> nnvec(pc.dim() + 1);
+    std::vector<size_type> idx_store(pc.size());
+    eigen_vector driver(pc.dim());
+    eigen_vector lambda(pc.dim() + 1);
     // there's only 2 cases of ascend tasks: completely new, and those starting
     // with d points on the boundary. The first case has not dropped yet, the
     // 2nd case has always dropped before
     DCHECK(_ah.size() == 1 or _ah.size() == pc.dim());
-//    auto vf = make_at_filter(_ah, _ray,
-//                             (_dropped.first ? _dropped.second : *_ah.begin()),
-//                             idx_store.begin());
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     
     DLOG(INFO) << "ASCEND-TASK-STARTS\n";
     do {
+      // TODO test a side of the plane check to speed up the flow to
+      //      infinity case
       auto ignoreFn = [this](size_type idx) {
         return (_ah.end() != std::find(_ah.begin(), _ah.end(), idx)) ||
-               (_dropped.first && idx == _dropped.second);
+               (_dropped.cend() != std::find(_dropped.cbegin(), _dropped.cend(), idx));
       };
       vertex_filter<point_cloud_t, typename std::vector<size_type>::iterator>
       vf(pc, _location, _ray, pc[*_ah.begin()], ignoreFn, idx_store.begin());
@@ -139,16 +128,17 @@ public:
                                       vf, nnvec.begin(),
                                       std::next(nnvec.begin(), max_nn));
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
-        DCHECK(_ah.size() == pc.dim());
-        DLOG(INFO) << "NO STOPPER FOUND - SPAWNING SUB DESCENDS\n";
+        DLOG(INFO) << "NO STOPPER FOUND\n";
         auto * inf_ptr = fc.max_at_inf();
-        if (_dropped.first) {  // we dropped before flowing to infinity
+        if (!_dropped.empty()) {  // we dropped before flowing to infinity
           DLOG(INFO) << "DROPPED BEFORE FLOW TO INF\n";
           auto & pos_offsets = nnvec;  // reuse
           DCHECK(size_type(pos_offsets.size()) >= _ah.size());
-          _ah.append_point(_dropped.second);  // append the dropped point
+          for (const auto idx : _dropped)
+            _ah.append_point(idx);  // append the dropped point
           using ci_type = circumsphere_ident<size_type>;
           if (cih(ci_type(_ah.begin(), _ah.end()))) { // avoid same inf descends
+            DLOG(INFO) << "SPAWNING SUB-DESCENDS\n";
             _ah.project(_location, lambda);
             auto pos_end = get_pos_offsets(lambda, pos_offsets.begin());
             spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
@@ -156,18 +146,21 @@ public:
           }
         }  // the else case covers the incidence when we ascend from a d-1 facet
            // in which case we don't need to descend back
+           // TODO but shouldn't we at least add inf to its successors??
         break;  // EXIT 1
       } else {
         DLOG(INFO) << "STOPPER FOUND\n";
         _location += nn.second * _ray;
+        _dropped.clear();  // we moved, the former dropped pts are no longer
+                           // on our circumsphere boundary
         for (auto it = nnvec.begin(); it != nn.first; ++it)
           _ah.append_point(*it);
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
-          simplex_case_upflow(lambda, driver,
+          if (simplex_case_upflow(lambda, driver,
                               idx_store.begin(), idx_store.end(),
-                              fc, ath, dth);
-          break;  // EXIT 2
+                              fc, dth))
+            break;  // EXIT 2 --> finite maximum
         } else {
           DLOG(INFO) << "NOT MAX YET - NEED TO CLIMB\n";
           update_ray<RAY_DIR::FROM_DRIVER>(_ah, _location, lambda,
@@ -175,7 +168,6 @@ public:
         }
       }
       // make vf consider all ambient points again on subsequent calls
-//      vf.reset(_ray, _ah, idx_store.begin());
     } while(true);
     DLOG(INFO) << "***AT-COMPLETE***\n";
   }
@@ -192,8 +184,9 @@ private:
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
     using Float = float;
-    std::random_device rd;
-    int seed = rd();
+//    std::random_device rd;
+    // TODO reset
+    int seed = 1337203914;//rd();
     DLOG(INFO) << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
@@ -225,12 +218,13 @@ private:
   /**
     @brief Handles the case when, during an upflow task, we are at the center of
            of the circumsphere of a full-dimensional-simplex.
+    @return true if finite maximum, false otherwise
   */
-  template <class IdxIterator, class DTHandler, class ATHandler>
-  void simplex_case_upflow(eigen_vector & lambda,
+  template <class IdxIterator, class DTHandler>
+  bool simplex_case_upflow(eigen_vector & lambda,
                            eigen_vector & driver,
                            IdxIterator begin, IdxIterator end,
-                           fc_type & fc, ATHandler & ath, DTHandler & dth) {
+                           fc_type & fc, DTHandler & dth) {
     auto & ah = _ah;
     auto const& pc = ah.pc();
     auto & x = _location;
@@ -255,27 +249,28 @@ private:
         spawn_sub_descends(dth, fc, begin, pos_end, std::move(x), std::move(ah),
                            max_ptr);
       }
+      return true;
     } else {
-      DLOG(INFO) << "NO FINITE MAX - SPAWN NEW ASCEND TASKS\n";
-      size_type dropped_idx;
+      DLOG(INFO) << "NO FINITE MAX - DROP NEG AND CONTINUE ASCEND\n";
+      DCHECK(_dropped.empty()) << "there should be no dropped points after "
+                                  "moving x along a ray";
       for (auto it = begin; it != neg_end; ++it) {
-        auto new_ah(ah);
-        dropped_idx = *(ah.begin() + *it);
-        new_ah.drop_point(new_ah.begin() + *it);
-        update_ray<RAY_DIR::FROM_DRIVER>(new_ah, x, lambda, driver, ray);
-        using ev = eigen_vector;
-        using at = self_t;
-        DLOG(INFO) << "NEW TASK: " << new_ah << std::endl
-                 << "DROPPED IDX = " << dropped_idx << std::endl;
-        ath(at(std::move(new_ah), ev(x), ev(ray), dropped_idx));
+        const auto & it_to_neg_idx = _ah.begin() + *it;
+        // we have to make a copy because _ah.drop_point() modifies the
+        // underlying range of it_to_neg_idx
+        const size_type negative_idx = *it_to_neg_idx;
+        _ah.drop_point(it_to_neg_idx);
+        _dropped.push_back(negative_idx);
       }
+      update_ray<RAY_DIR::FROM_DRIVER>(_ah, x, lambda, driver, ray);
+      return false;
     }
   }
 
   affine_hull<point_cloud_type> _ah;
   eigen_vector                  _location;
   eigen_vector                  _ray;
-  std::pair<bool, size_type>    _dropped;
+  std::vector<size_type>        _dropped;
 };
 
 }  // namespace

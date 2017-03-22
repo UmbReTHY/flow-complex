@@ -32,7 +32,7 @@ struct vertex_filter {
                 ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
     _end = pc.radius_search(driver,
-                            (pc[*member_begin] - driver).squaredNorm(),
+                            2 * (pc[*member_begin] - driver).squaredNorm(),
                             _current);
     _end = std::remove_if(_current, _end, [=](size_type idx) {
       return (member_end != std::find(member_begin, member_end, idx) or
@@ -58,8 +58,8 @@ struct vertex_filter {
     using number_type = typename Derived1::Scalar;
     using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
     size_type num_iter = 0;
-    const double sq_diameter = pc.diameter() * pc.diameter();
-    double sq_radius;
+    const number_type sq_diameter = pc.diameter() * pc.diameter();
+    number_type sq_radius;
     // TODO insert approx check about direction.Norm() being almost 0
     // probe for candidate stoppers by increasing the probing sphere
     // exponentially until we exceed the diameter of the dataset
@@ -75,15 +75,11 @@ struct vertex_filter {
     // on the boundary floating to infinity, but still, it is technically 
     // possible we pick up a point very far outside because of a sliver, so we
     // have to check all points of the dataset, to be safe
-    // TODO this is a heuristic: we skip the scanning of all points if the
-    //      probing above didn't find any candidates. Id definitely speeds up
-    //      the code, but there could be edge cases where this fails to be
-    //      correct
-//    if (_end == _current) {
-//      _end = std::next(_current, pc.size());
-//      std::iota(_current, _end, 0);
-//      _end = std::remove_if(_current, _end, ignoreFn);
-//    }
+    if (_end == _current) {
+      _end = std::next(_current, pc.size());
+      std::iota(_current, _end, 0);
+      _end = std::remove_if(_current, _end, ignoreFn);
+    }
   }
   
   eigen_map const* operator()(size_type * idx_ptr) {

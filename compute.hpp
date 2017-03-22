@@ -19,6 +19,9 @@
 
 namespace FC {
 
+/**
+  @num_threads if negative, use Intel TBB default
+*/
 template <typename size_type,    // type that is capable of holding the indices
                                  // of the critical points
           bool Aligned = false,
@@ -27,7 +30,7 @@ template <typename size_type,    // type that is capable of holding the indices
 flow_complex<typename base_t<decltype((*PointIterator())[0])>::type,
              size_type>
 compute_flow_complex (PointIterator begin, PointIterator end,
-                      dim_type dim) {
+                      dim_type dim, int num_threads) {
   DLOG(INFO) << "*****************COMPUTE-START*************************\n";
   using number_type = typename base_t<decltype((*PointIterator())[0])>::type;
   using fc_type = flow_complex<number_type, size_type>;
@@ -53,9 +56,9 @@ compute_flow_complex (PointIterator begin, PointIterator end,
   // 3) seed initial ascend task(s)
   using item_t = std::shared_ptr<abstract_task<pc_type>>;
   using feeder_t = tbb::parallel_do_feeder<item_t>;
+  if (num_threads < 0) num_threads = tbb::task_scheduler_init::default_num_threads();
   std::vector<item_t> tasks;
-  tbb::task_scheduler_init init;
-  int num_threads = init.default_num_threads();
+  tbb::task_scheduler_init init(num_threads);
   for (int i = 1; i <= num_threads; ++i)
     tasks.push_back(item_t(make_task_wrapper(at_type(pc), acih)));
   // 4) process all tasks

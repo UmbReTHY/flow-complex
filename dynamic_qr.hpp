@@ -228,18 +228,18 @@ private:
       *c = 1.0;
       *s = 0.0;
     } else {
-      if (std::abs(b) > std::abs(a)) {
+      if (abs(b) > abs(a)) {
         number_type const tau = -a / b;
-        *s = 1 / std::sqrt(1 + (tau * tau));
+        *s = 1 / sqrt(1 + (tau * tau));
         *c = *s * tau;
       } else {
         number_type const tau = -b / a;
-        *c = 1 / std::sqrt(1 + (tau * tau));
+        *c = 1 / sqrt(1 + (tau * tau));
         *s = *c * tau;
       }
     }
-    assert(std::abs(*c) <= 1);
-    assert(std::abs(*s) <= 1);
+    DCHECK(abs(*c) <= 1);
+    DCHECK(abs(*s) <= 1);
   }
   
   void update_q(number_type const& c, number_type const& s, size_type k) {

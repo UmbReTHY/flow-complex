@@ -82,11 +82,11 @@ public:
   void execute(ATHandler & ath, DTHandler & dth, fc_type & fc,
                CIHandler & cih) {
     auto const& pc = _ah.pc();
-    thread_local eigen_vector driver(pc.dim());
-    thread_local eigen_vector lambda(pc.dim() + 1);
-    thread_local std::vector<size_type> idx_store(pc.size());
-    thread_local std::vector<size_type> nnvec(pc.dim() + 1);
-    thread_local eigen_vector ray;
+    eigen_vector driver(pc.dim());
+    eigen_vector lambda(pc.dim() + 1);
+    std::vector<size_type> idx_store(pc.size());
+    std::vector<size_type> nnvec(pc.dim() + 1);
+    eigen_vector ray;
 
     update_ray<RAY_DIR::TO_DRIVER>(_ah, _location, lambda, driver, ray);
     DLOG(INFO) << "DESCEND-TASK STARTS: address = " << this << std::endl
@@ -109,7 +109,7 @@ public:
     if (nn.first == nnvec.begin() or nn.second > 1.0) {
       DLOG(INFO) << "DESCEND SUCCESSFUL\n";
       auto & x = driver;
-      assert(_ah.size() <= lambda.size());
+      DCHECK(_ah.size() <= lambda.size());
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
       if (std::distance(pos_offsets.begin(), pos_end) == _ah.size()) {
@@ -118,17 +118,27 @@ public:
         number_type const sq_dist = (x - _ah.pc()[*_ah.begin()]).squaredNorm();
         cp_type new_cp(_ah.begin(), _ah.end(), sq_dist, _succ);
         auto const insert_pair =  fc.insert(std::move(new_cp));
-        if (insert_pair.first) {
+        if (insert_pair.first) {  // it was a new critical point
+          // TODO REMOVE-BEGIN
+//          std::vector<size_type> neighborhood(pc.size());
+//          auto nb_end = pc.radius_search(x, sq_dist, neighborhood.begin());
+//          if (!std::is_permutation(_ah.begin(), _ah.end(), neighborhood.begin())) {
+//            std::cout << "cp ";
+//            for (auto it = _ah.begin(); it != _ah.end(); ++it) std::cout << *it << '\t';
+//            std::cout << "is not actually critical!!" << std::endl;
+//            std::cout << "All nearest neighbors: ";
+//            for (auto it = neighborhood.begin(); it != nb_end; ++it) std::cout << *it << '\t';
+//            std::cout << std::endl;
+//            std::exit(EXIT_FAILURE);
+//          }
+          // TODO REMOVE-END
           auto * new_succ = insert_pair.second;
           if (new_succ->index() > 1) {
-            std::iota(pos_offsets.begin(),
-                      std::next(pos_offsets.begin(), _ah.size()), 0);
-            spawn_sub_descends(dth, fc, pos_offsets.begin(),
-                               std::next(pos_offsets.begin(), _ah.size()),
+            spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                                eigen_vector(x), _ah, new_succ);
           } else {
             // update incidences of the adjacent minima, of this gabriel edge
-            assert(1 == new_succ->index());
+            DCHECK(1 == new_succ->index());
             auto idx_it = new_succ->idx_begin();
             fc.minimum(*idx_it)->add_successor(new_succ);
             fc.minimum(*++idx_it)->add_successor(new_succ);
@@ -149,7 +159,12 @@ public:
         DLOG(INFO) << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
         using at = ascend_task<point_cloud_type>;
         DLOG(INFO) << "t = " << nn.second << std::endl;
-        assert(nn.first == nnvec.begin());  // there is no stopper -> radius search
+        // TODO actually we have all the information we need at this point:
+        //      if (nn.first == nnvec.begin()) the maximum on the other side is
+        //      inf, otherwise it's a possible max-candidate formed by all the
+        //      points in _ah and *nn.first: we could just call the member
+        //      simplex-case-upflow ascend task then --> saves another
+        //      nn-along-ray search
         ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
       } else {
         DLOG(INFO) << "NO ASCEND TO OTHER SIDE, BECAUSE "
@@ -157,25 +172,28 @@ public:
                                              : "NO D-1 CRITICAL POINT\n");
       }
     } else {
-      assert(nn.second < 1.0);
+      DCHECK(nn.second < 1.0);
       _location += nn.second * ray;
       auto const  stopper_begin = nnvec.begin();
       auto const& stopper_end = nn.first;
-      for (auto it = stopper_begin; it != stopper_end; ++it) {  // TODO move last iteration
+      for (auto it = stopper_begin; it != stopper_end; ++it) {
         size_type stopper = *it;
         DLOG(INFO) << "DESCEND GOT STOPPED by index: " << stopper << std::endl;
-        auto new_ah(_ah);
-        new_ah.append_point(stopper);
-        assert(lambda.size() >= new_ah.size());
-        // more than stopper can be < 0 -> we have to project
-        new_ah.project(_location, lambda.head(new_ah.size()));
-        assert(lambda[new_ah.size() - 1] < 0);  // stopper: < 0
-        auto pos_end = get_pos_offsets(lambda.head(new_ah.size()),
-                                       pos_offsets.begin());
-        spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
-                           std::move(_location), std::move(new_ah), _succ,
-                           stopper_begin, stopper_end);
+        _ah.append_point(stopper);
       }
+      DCHECK(lambda.size() >= _ah.size());
+      // more than stopper can be < 0 -> we have to project
+      _ah.project(_location, lambda.head(_ah.size()));
+      for (int i = 0; i < std::distance(stopper_begin, stopper_end); ++i) {
+        DLOG(INFO) << "lambda[i] = " << lambda[_ah.size() - 1 - i];
+        // TODO inspect this issue, also check the vertex filter for this case
+        //      it's still altered
+        DCHECK(lambda[_ah.size() - 1 - i] < 0);  // stopper: < 0
+      }
+      auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
+                                     pos_offsets.begin());
+      spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
+                         std::move(_location), std::move(_ah), _succ);
     }
   }
 private:

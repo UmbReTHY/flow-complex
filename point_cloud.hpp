@@ -94,7 +94,7 @@ public:
         if (sq_distance > diameter_) diameter_ = sq_distance;
       }
     }
-    diameter_ = std::sqrt(diameter_);
+    diameter_ = sqrt(diameter_);
   }
   
   iterator begin() const noexcept {
