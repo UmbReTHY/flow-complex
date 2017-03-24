@@ -88,13 +88,17 @@ public:
     _kd_tree.reset(new KDTree(dim, _data_adaptor, Params(15)));
     _kd_tree->buildIndex();
     // compute diameter of dataset
-    for (const auto& u : _points) {
-      for (const auto& v : _points) {
+    number_type sq_diameter = 0.0;
+    #pragma omp parallel for reduction(max:sq_diameter)
+    for (int i = 0; i < _points.size(); ++i) {
+      for (int j = i + 1; j < _points.size(); ++j) {
+        const auto& u = _points[i];
+        const auto& v = _points[j];
         const double sq_distance = (u-v).squaredNorm();
-        if (sq_distance > diameter_) diameter_ = sq_distance;
+        if (sq_distance > sq_diameter) sq_diameter = sq_distance;
       }
     }
-    diameter_ = sqrt(diameter_);
+    diameter_ = sqrt(sq_diameter);
   }
   
   iterator begin() const noexcept {

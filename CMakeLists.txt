@@ -38,6 +38,8 @@ find_package (glog 0.3.4 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
 find_package(GooglePerfTools)
+find_package(OpenMP REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 include_directories(SYSTEM
                     ${EIGEN3_INCLUDE_DIR}
