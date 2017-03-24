@@ -254,15 +254,29 @@ private:
       DLOG(INFO) << "NO FINITE MAX - DROP NEG AND CONTINUE ASCEND\n";
       DCHECK(_dropped.empty()) << "there should be no dropped points after "
                                   "moving x along a ray";
+      // here we differ from the paper: dropping all points and projecting
+      // on the remaining affine hull ONLY works if dropping a single point.
+      // when dropping multiple points the resulting flow direction
+      // not necessarily leaves the circumsphere void of ALL of the recently
+      // dropped points.
+      // The solution is to create the direction of flow as the average of all
+      // rays that result from dropping each single negative point and
+      // projecting on the thus created affine hull
+      ray.setZero();
       for (auto it = begin; it != neg_end; ++it) {
-        const auto & it_to_neg_idx = _ah.begin() + *it;
-        // we have to make a copy because _ah.drop_point() modifies the
-        // underlying range of it_to_neg_idx
-        const size_type negative_idx = *it_to_neg_idx;
-        _ah.drop_point(it_to_neg_idx);
-        _dropped.push_back(negative_idx);
+        auto new_ah(_ah);
+        const auto it_to_neg_idx = new_ah.begin() + *it;
+        const size_type dropped_idx = *it_to_neg_idx;
+        _dropped.push_back(dropped_idx);
+        new_ah.drop_point(it_to_neg_idx);
+        eigen_vector tmp_ray(pc.dim());
+        update_ray<RAY_DIR::FROM_DRIVER>(new_ah, x, lambda, driver, tmp_ray);
+        ray += tmp_ray;
       }
-      update_ray<RAY_DIR::FROM_DRIVER>(_ah, x, lambda, driver, ray);
+      ray /= _dropped.size();
+      // now perform the actual dropping on the used affine hull
+      for (auto it = begin; it != neg_end; ++it)
+        _ah.drop_point(_ah.begin() + *it);
       return false;
     }
   }

@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   CHECK(!FLAGS_point_cloud.empty()) << "point cloud file missing";
   try {
-    using float_t = double;
+    using float_t = long double;
     std::ifstream in_file(FLAGS_point_cloud);
     if (!in_file)
       throw std::runtime_error("could not open " + FLAGS_point_cloud);

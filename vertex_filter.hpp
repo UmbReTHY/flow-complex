@@ -31,8 +31,7 @@ struct vertex_filter {
                 Iterator ignore_begin, Iterator ignore_end,
                 ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
-    _end = pc.radius_search(driver,
-                            2 * (pc[*member_begin] - driver).squaredNorm(),
+    _end = pc.radius_search(driver, (pc[*member_begin] - driver).squaredNorm(),
                             _current);
     _end = std::remove_if(_current, _end, [=](size_type idx) {
       return (member_end != std::find(member_begin, member_end, idx) or

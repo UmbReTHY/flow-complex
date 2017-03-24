@@ -119,19 +119,6 @@ public:
         cp_type new_cp(_ah.begin(), _ah.end(), sq_dist, _succ);
         auto const insert_pair =  fc.insert(std::move(new_cp));
         if (insert_pair.first) {  // it was a new critical point
-          // TODO REMOVE-BEGIN
-//          std::vector<size_type> neighborhood(pc.size());
-//          auto nb_end = pc.radius_search(x, sq_dist, neighborhood.begin());
-//          if (!std::is_permutation(_ah.begin(), _ah.end(), neighborhood.begin())) {
-//            std::cout << "cp ";
-//            for (auto it = _ah.begin(); it != _ah.end(); ++it) std::cout << *it << '\t';
-//            std::cout << "is not actually critical!!" << std::endl;
-//            std::cout << "All nearest neighbors: ";
-//            for (auto it = neighborhood.begin(); it != nb_end; ++it) std::cout << *it << '\t';
-//            std::cout << std::endl;
-//            std::exit(EXIT_FAILURE);
-//          }
-          // TODO REMOVE-END
           auto * new_succ = insert_pair.second;
           if (new_succ->index() > 1) {
             spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
@@ -172,8 +159,10 @@ public:
                                              : "NO D-1 CRITICAL POINT\n");
       }
     } else {
+      DLOG(INFO) << "old location is " << _location.transpose();
       DCHECK(nn.second < 1.0);
       _location += nn.second * ray;
+      DLOG(INFO) << "new location is " << _location.transpose();
       auto const  stopper_begin = nnvec.begin();
       auto const& stopper_end = nn.first;
       for (auto it = stopper_begin; it != stopper_end; ++it) {
@@ -184,12 +173,8 @@ public:
       DCHECK(lambda.size() >= _ah.size());
       // more than stopper can be < 0 -> we have to project
       _ah.project(_location, lambda.head(_ah.size()));
-      for (int i = 0; i < std::distance(stopper_begin, stopper_end); ++i) {
-        DLOG(INFO) << "lambda[i] = " << lambda[_ah.size() - 1 - i];
-        // TODO inspect this issue, also check the vertex filter for this case
-        //      it's still altered
-        DCHECK(lambda[_ah.size() - 1 - i] < 0);  // stopper: < 0
-      }
+      DLOG(INFO) << "affine hull size = " << _ah.size();
+      DLOG(INFO) << "lambda = " << lambda.head(_ah.size()).transpose();
       auto pos_end = get_pos_offsets(lambda.head(_ah.size()),
                                      pos_offsets.begin());
       spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
