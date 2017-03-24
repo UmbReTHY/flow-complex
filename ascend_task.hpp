@@ -183,10 +183,10 @@ private:
            
   */
   void gen_convex_comb(point_cloud_type const& pc, eigen_vector & target) {
-    using Float = float;
-//    std::random_device rd;
-    // TODO reset
-    int seed = 1337203914;//rd();
+    // use a number type which is compatible with <random> within the STL
+    using Float = long double;
+    std::random_device rd;
+    int seed = rd();
     DLOG(INFO) << "seed = " << seed << std::endl;
     std::mt19937 gen(seed);
     // generates numbers in [0, pc.size() - 1]
