@@ -140,6 +140,7 @@ public:
         spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                            eigen_vector(x), _ah, _succ);
       }
+      // TODO do we need to ascend to the other side if the point was not critical??
       // handles both the critical and non-critical case
       using ci_type = circumsphere_ident<size_type>;
       if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {

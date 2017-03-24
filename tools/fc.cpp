@@ -13,9 +13,6 @@
 #include "file_io.hpp"
 #include "flow_complex.hpp"
 
-#include <boost/multiprecision/cpp_dec_float.hpp>
-namespace mp = boost::multiprecision;
-
 DEFINE_string(point_cloud, "", "path to file containing a point cloud");
 DEFINE_bool(hist, false, "flag to toggle a print of the histogram of"
                          " computed critical points");

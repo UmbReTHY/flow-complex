@@ -59,7 +59,6 @@ struct vertex_filter {
     size_type num_iter = 0;
     const number_type sq_diameter = pc.diameter() * pc.diameter();
     number_type sq_radius;
-    // TODO insert approx check about direction.Norm() being almost 0
     // probe for candidate stoppers by increasing the probing sphere
     // exponentially until we exceed the diameter of the dataset
     do {
