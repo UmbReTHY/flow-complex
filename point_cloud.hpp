@@ -195,6 +195,10 @@ private:
       return _begin;
     }
     
+    bool full() const {
+			return false;
+		}
+    
   private:
     Iterator        _begin;
     number_type _sq_radius;
