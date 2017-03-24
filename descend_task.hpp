@@ -84,7 +84,7 @@ public:
     auto const& pc = _ah.pc();
     eigen_vector driver(pc.dim());
     eigen_vector lambda(pc.dim() + 1);
-    std::vector<size_type> idx_store(pc.size());
+    thread_local std::vector<size_type> idx_store(pc.size());
     std::vector<size_type> nnvec(pc.dim() + 1);
     eigen_vector ray;
 
