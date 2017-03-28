@@ -8,10 +8,14 @@
 #include <tuple>
 #include <vector>
 
+#include <gflags/gflags.h>
 #include <Eigen/Core>
 #include <nanoflann.hpp>
 
 #include "utility.hpp"
+
+DEFINE_int32(kdtree_leaf_size, 16, "maximal number of indices in kd-tree "
+                                   "leaf nodes");
 
 namespace FC {
 
@@ -85,7 +89,9 @@ public:
     for (auto it = begin; it != end; ++it)
       _points.emplace_back(&((*it)[0]), dim);
     using Params = nanoflann::KDTreeSingleIndexAdaptorParams;
-    _kd_tree.reset(new KDTree(dim, _data_adaptor, Params(15)));
+    CHECK(FLAGS_kdtree_leaf_size > 0);
+    _kd_tree.reset(new KDTree(dim, _data_adaptor,
+                              Params(FLAGS_kdtree_leaf_size)));
     _kd_tree->buildIndex();
     // compute diameter of dataset
     number_type sq_diameter = 0.0;
@@ -94,7 +100,7 @@ public:
       for (int j = i + 1; j < _points.size(); ++j) {
         const auto& u = _points[i];
         const auto& v = _points[j];
-        const double sq_distance = (u-v).squaredNorm();
+        const number_type sq_distance = (u-v).squaredNorm();
         if (sq_distance > sq_diameter) sq_diameter = sq_distance;
       }
     }
