@@ -49,12 +49,12 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
     //    sucessors
     // 2) if we accpet that, and flow back, then only at infinity do we he have
     //    q on our boundary, not at the proxy where we proceed during descend
-    if (!Eigen::internal::isApprox(tmp, number_type(0.0))) {
+    if (tmp != 0.0) {
       number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
       DLOG(INFO) << "t = " << t << " for id = " << q_idx << std::endl;
       if (t > 0 and (r.first == begin or t <= r.second)) {
         DLOG(INFO) << "t-DIFF = " << (t - r.second) << std::endl;
-        if (r.first != begin and Eigen::internal::isApprox(t, r.second)) {
+        if (r.first != begin and t == r.second) {
           if (r.first == end)
             throw std::logic_error("too many nearest neighbors");
         } else {

@@ -19,17 +19,19 @@ DEFINE_bool(hist, false, "flag to toggle a print of the histogram of"
 DEFINE_int32(num_threads, -1, "number of threads to use");
 
 int main(int argc, char ** argv) {
+  google::InitGoogleLogging(argv[0]);
+  gflags::SetUsageMessage("call with --helpshort parameter for available flags");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   CHECK(!FLAGS_point_cloud.empty()) << "point cloud file missing";
   try {
-    using float_t = long double;
+    using float_t = double;
     std::ifstream in_file(FLAGS_point_cloud);
     if (!in_file)
       throw std::runtime_error("could not open " + FLAGS_point_cloud);
     FC::point_store<float_t> ps;
     in_file >> ps;
     if (0 == ps.size()) throw std::invalid_argument("empty data sets");
-    using size_type = std::int64_t;
+    using size_type = std::int32_t;
     size_type const dim = ps[0].size();
     auto fc = FC::compute_flow_complex<size_type>(ps.begin(), ps.end(), dim,
                                                   FLAGS_num_threads);

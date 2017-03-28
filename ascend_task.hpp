@@ -111,11 +111,10 @@ public:
     
     DLOG(INFO) << "ASCEND-TASK-STARTS\n";
     do {
-      // TODO test a side of the plane check to speed up the flow to
-      //      infinity case
       auto ignoreFn = [this](size_type idx) {
         return (_ah.end() != std::find(_ah.begin(), _ah.end(), idx)) ||
-               (_dropped.cend() != std::find(_dropped.cbegin(), _dropped.cend(), idx));
+               (_dropped.cend() !=
+                std::find(_dropped.cbegin(), _dropped.cend(), idx));
       };
       vertex_filter<point_cloud_t, typename std::vector<size_type>::iterator>
       vf(pc, _location, _ray, pc[*_ah.begin()], ignoreFn, idx_store.begin());
@@ -127,6 +126,7 @@ public:
       nn = nearest_neighbor_along_ray(_location, _ray, pc[*_ah.begin()],
                                       vf, nnvec.begin(),
                                       std::next(nnvec.begin(), max_nn));
+      using ci_type = circumsphere_ident<size_type>;
       if (nn.first == nnvec.begin()) {  // no nn found -> proxy at inf
         DLOG(INFO) << "NO STOPPER FOUND\n";
         auto * inf_ptr = fc.max_at_inf();
@@ -136,7 +136,6 @@ public:
           DCHECK(size_type(pos_offsets.size()) >= _ah.size());
           for (const auto idx : _dropped)
             _ah.append_point(idx);  // append the dropped point
-          using ci_type = circumsphere_ident<size_type>;
           if (cih(ci_type(_ah.begin(), _ah.end()))) { // avoid same inf descends
             DLOG(INFO) << "SPAWNING SUB-DESCENDS\n";
             _ah.project(_location, lambda);
@@ -144,9 +143,26 @@ public:
             spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                                std::move(_location), std::move(_ah), inf_ptr);
           }
-        }  // the else case covers the incidence when we ascend from a d-1 facet
-           // in which case we don't need to descend back
-           // TODO but shouldn't we at least add inf to its successors??
+        } else {
+          // the else case covers the incidence when we ascend from a critical
+          // d-1 facet (new ascend task spawned from a successful descend task)
+          // but ALSO(!) from a multi-drop ascend task, therefore, we DO need
+          // to descend back
+          using cp_type = typename fc_type::cp_type;
+          auto * cp = fc.find(cp_type(_ah.begin(), _ah.end(), 0.0));
+          if(!cp) {
+            // neither a d-1 critical point ascend (where _location is identical
+            // to the driver and the direction vector would be 0),
+            // nor an already found critical point discovered by someone else
+            // hence: look fore something
+            // Side-Note: this accounts for 99% of compute time
+            using dt = descend_task<point_cloud_type>;
+            if (cih(ci_type(_ah.begin(), _ah.end())))
+              dth(dt(std::move(_ah), std::move(_location), inf_ptr));
+          } else {
+            cp->add_successor(inf_ptr);
+          }
+        }
         break;  // EXIT 1
       } else {
         DLOG(INFO) << "STOPPER FOUND\n";
