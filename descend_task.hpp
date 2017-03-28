@@ -35,13 +35,10 @@ private:
   using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
   using cp_type = critical_point<number_type, size_type>;
 public:
-  template <class Iterator>
   descend_task(affine_hull<point_cloud_type> ah,
                eigen_vector && location,
-               critical_point<number_type, size_type> * succ,
-               Iterator ignore_begin, Iterator ignore_end)
-    : _ah(std::move(ah)), _location(), _succ(succ),
-      _ignore_indices(ignore_begin, ignore_end) {
+               critical_point<number_type, size_type> * succ)
+    : _ah(std::move(ah)), _location(), _succ(succ) {
     DLOG(INFO) << "****DT-CONSTRUCTOR-BEGIN*****\n"
              << "address = " << this << std::endl
              << _ah << std::endl
@@ -117,7 +114,7 @@ public:
         DLOG(INFO) << "LOC = " << x.transpose() << std::endl;
         number_type const sq_dist = (x - _ah.pc()[*_ah.begin()]).squaredNorm();
         cp_type new_cp(_ah.begin(), _ah.end(), sq_dist, _succ);
-        auto const insert_pair =  fc.insert(std::move(new_cp));
+        const auto insert_pair =  fc.insert(std::move(new_cp));
         if (insert_pair.first) {  // it was a new critical point
           auto * new_succ = insert_pair.second;
           if (new_succ->index() > 1) {
@@ -130,6 +127,20 @@ public:
             fc.minimum(*idx_it)->add_successor(new_succ);
             fc.minimum(*++idx_it)->add_successor(new_succ);
           }
+          // search for the adjacent maximum, if we found a d-1 critical point
+          if (_ah.size() == pc.dim()) {
+            DLOG(INFO) << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
+            using at = ascend_task<point_cloud_type>;
+            DLOG(INFO) << "t = " << nn.second << std::endl;
+            // TODO actually we have all the information we need at this point:
+            //      if (nn.first == nnvec.begin()) the maximum on the other side is
+            //      inf (not true -> radius search confined search to small set of test indices ...),
+            //      otherwise it's a possible max-candidate formed by all the
+            //      points in _ah and *nn.first: we could just call the member
+            //      simplex-case-upflow ascend task then --> saves another
+            //      nn-along-ray search
+            ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
+          }
         } else {
           // update incidences of insert_pair.second
           auto * already_found_cp = insert_pair.second;
@@ -139,25 +150,6 @@ public:
         DLOG(INFO) << "ONLY AFFINE HULL\n";
         spawn_sub_descends(dth, fc, pos_offsets.begin(), pos_end,
                            eigen_vector(x), _ah, _succ);
-      }
-      // TODO do we need to ascend to the other side if the point was not critical??
-      // handles both the critical and non-critical case
-      using ci_type = circumsphere_ident<size_type>;
-      if (_ah.size() == pc.dim() and cih(ci_type(_ah.begin(), _ah.end()))) {
-        DLOG(INFO) << "SPAWN ASCEND TO MAX ON OTHER SIDE\n";
-        using at = ascend_task<point_cloud_type>;
-        DLOG(INFO) << "t = " << nn.second << std::endl;
-        // TODO actually we have all the information we need at this point:
-        //      if (nn.first == nnvec.begin()) the maximum on the other side is
-        //      inf, otherwise it's a possible max-candidate formed by all the
-        //      points in _ah and *nn.first: we could just call the member
-        //      simplex-case-upflow ascend task then --> saves another
-        //      nn-along-ray search
-        ath(at(std::move(_ah), eigen_vector(driver), std::move(ray)));
-      } else {
-        DLOG(INFO) << "NO ASCEND TO OTHER SIDE, BECAUSE "
-                  << (_ah.size() == pc.dim() ? "ALREADY DESCENDED IN HERE\n"
-                                             : "NO D-1 CRITICAL POINT\n");
       }
     } else {
       DLOG(INFO) << "old location is " << _location.transpose();

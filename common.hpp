@@ -75,9 +75,7 @@ void spawn_sub_descends(DTHandler & dth,
                         Iterator drop_pos_begin, Iterator drop_pos_end,
                         Eigen::Matrix<number_type, Eigen::Dynamic, 1> && x,
                         affine_hull<PointCloud> ah,
-                        critical_point<number_type, size_type> * succ,
-                        Iterator2 ignore_begin = nullptr,
-                        Iterator2 ignore_end = nullptr) {
+                        critical_point<number_type, size_type> * succ) {
   using dt_type = descend_task<PointCloud>;
   using fc_type = flow_complex<number_type, size_type>;
   using cp_type = typename fc_type::cp_type;
@@ -99,8 +97,7 @@ void spawn_sub_descends(DTHandler & dth,
       new_ah.drop_point(new_ah.begin() + *it);
       DLOG(INFO) << "DT takes dropped idx = " << dropped_idx << std::endl;
       using eigen_vector = Eigen::Matrix<number_type, Eigen::Dynamic, 1>;
-      dt_type dt(std::move(new_ah), eigen_vector(x), succ,
-                 ignore_begin, ignore_end);
+      dt_type dt(std::move(new_ah), eigen_vector(x), succ);
       dt.add_ignore_idx(dropped_idx);
       dth(std::move(dt));
     }
