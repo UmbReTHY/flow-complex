@@ -24,7 +24,7 @@ int main(int argc, char ** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   CHECK(!FLAGS_point_cloud.empty()) << "point cloud file missing";
   try {
-    using float_t = double;
+    using float_t = long double;
     std::ifstream in_file(FLAGS_point_cloud);
     if (!in_file)
       throw std::runtime_error("could not open " + FLAGS_point_cloud);
@@ -45,6 +45,7 @@ int main(int argc, char ** argv) {
       for (const auto& cp_pair : FC::compute_hist(fc))
         std::cout << cp_pair.first << "\t" << cp_pair.second << std::endl;
     }
+    std::cout.flush();
     // cleansing
     fc = clean_incidences(std::move(fc));
     // printing
