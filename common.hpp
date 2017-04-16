@@ -104,6 +104,19 @@ void spawn_sub_descends(DTHandler & dth,
   }
 }
 
+template <typename PointCloud, typename Derived, typename AffineHull,
+          typename IgnoreFn>
+bool ball_is_empty(const PointCloud& pc, const Eigen::MatrixBase<Derived>& x,
+                   const AffineHull& ah, const IgnoreFn& ignoreFn) {
+  using size_type = typename PointCloud::size_type;
+  using number_type = typename PointCloud::number_type;
+  thread_local std::vector<size_type> nn_indices(pc.size());
+  const number_type radius_sq = (pc[*ah.begin()] - x).squaredNorm();
+  auto end = pc.radius_search(x, radius_sq, nn_indices.begin());
+  end = std::remove_if(nn_indices.begin(), end, ignoreFn);
+  return nn_indices.begin() == end;
+}
+
 }  // namespace FC
 
 #endif  // COMMON_HPP_

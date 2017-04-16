@@ -116,6 +116,7 @@ public:
                (_dropped.cend() !=
                 std::find(_dropped.cbegin(), _dropped.cend(), idx));
       };
+      DCHECK(ball_is_empty(pc, _location, _ah, ignoreFn));
       vertex_filter<point_cloud_t, typename std::vector<size_type>::iterator>
       vf(pc, _location, _ray, pc[*_ah.begin()], ignoreFn, idx_store.begin());
       DLOG(INFO) << _ah << std::endl
@@ -154,7 +155,7 @@ public:
             // neither a d-1 critical point ascend (where _location is identical
             // to the driver and the direction vector would be 0),
             // nor an already found critical point discovered by someone else
-            // hence: look fore something
+            // hence: look for something
             // Side-Note: this accounts for 99% of compute time
             using dt = descend_task<point_cloud_type>;
             if (cih(ci_type(_ah.begin(), _ah.end())))
@@ -165,12 +166,14 @@ public:
         }
         break;  // EXIT 1
       } else {
-        DLOG(INFO) << "STOPPER FOUND\n";
+        DLOG(INFO) << "STOPPER FOUND";
         _location += nn.second * _ray;
         _dropped.clear();  // we moved, the former dropped pts are no longer
                            // on our circumsphere boundary
-        for (auto it = nnvec.begin(); it != nn.first; ++it)
+        for (auto it = nnvec.begin(); it != nn.first; ++it) {
+          DLOG(INFO) << "Index is: " << *it;
           _ah.append_point(*it);
+        }
         // check for finite max
         if (_ah.size() == pc.dim() + 1) {
           if (simplex_case_upflow(lambda, driver,

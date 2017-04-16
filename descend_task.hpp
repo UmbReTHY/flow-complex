@@ -97,6 +97,7 @@ public:
                (_ignore_indices.cend() !=
                 std::find(_ignore_indices.cbegin(), _ignore_indices.cend(), idx));
       };
+      DCHECK(ball_is_empty(pc, _location, _ah, ignoreFn));
       auto vf = make_dt_filter(pc, driver, pc[*_ah.begin()], ignoreFn,
                                idx_store.begin());
       size_type const max_num_nn = pc.dim() + 1 - _ah.size();
