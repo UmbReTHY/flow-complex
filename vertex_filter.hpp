@@ -24,19 +24,16 @@ struct vertex_filter {
   /**
     @brief for descend tasks
   */
-  template <class Derived, class MemberIterator, class Iterator>
-  vertex_filter(PointCloud const& pc,
-                Eigen::MatrixBase<Derived> const& driver,
-                MemberIterator member_begin, MemberIterator member_end,
-                Iterator ignore_begin, Iterator ignore_end,
+  template <class Derived1, class Derived2, class IgnoreFn>
+  vertex_filter(const PointCloud& pc,
+                const Eigen::MatrixBase<Derived1>& driver,
+                const Eigen::MatrixBase<Derived2>& member,
+                const IgnoreFn& ignoreFn,
                 ResultIterator result_begin)
   : _pc(pc), _current(result_begin), _end(result_begin) {
-    _end = pc.radius_search(driver, (pc[*member_begin] - driver).squaredNorm(),
+    _end = pc.radius_search(driver, (member - driver).squaredNorm(),
                             _current);
-    _end = std::remove_if(_current, _end, [=](size_type idx) {
-      return (member_end != std::find(member_begin, member_end, idx) or
-              ignore_end != std::find(ignore_begin, ignore_end, idx));
-    });
+    _end = std::remove_if(_current, _end, ignoreFn);
     DLOG(INFO) << "VERTEX-FILTER ctor: candidate indices = ";
     for (auto it = _current; it != _end; ++it)
       DLOG(INFO) << *it << ", ";
@@ -99,15 +96,16 @@ private:
   ResultIterator    _end;
 };
 
-template <class PointCloud, class Iterator, class Derived, class Iterator2>
+template <class PointCloud, class Derived1, class Derived2, class IgnoreFn,
+          class Iterator>
 vertex_filter<PointCloud, Iterator>
-make_dt_filter(affine_hull<PointCloud> const& ah,
-               Eigen::MatrixBase<Derived> const& driver,
-               Iterator2 ignore_begin, Iterator2 ignore_end,
+make_dt_filter(const PointCloud& pc,
+               const Eigen::MatrixBase<Derived1>& driver,
+               const Eigen::MatrixBase<Derived2>& member,
+               const IgnoreFn& ignoreFn,
                Iterator result_begin) {
   using vf_type = vertex_filter<PointCloud, Iterator>;
-  return vf_type(ah.pc(), driver, ah.begin(), ah.end(),
-                 ignore_begin, ignore_end, result_begin);
+  return vf_type(pc, driver, member, ignoreFn, result_begin);
 }
 
 }  // namespace FC

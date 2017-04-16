@@ -92,8 +92,13 @@ public:
              << "RAY: " << ray.transpose() << std::endl;
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     try {
-      auto vf = make_dt_filter(_ah, driver, _ignore_indices.begin(),
-                               _ignore_indices.end(), idx_store.begin());
+      auto ignoreFn = [this](size_type idx) {
+        return (_ah.end() != std::find(_ah.begin(), _ah.end(), idx)) ||
+               (_ignore_indices.cend() !=
+                std::find(_ignore_indices.cbegin(), _ignore_indices.cend(), idx));
+      };
+      auto vf = make_dt_filter(pc, driver, pc[*_ah.begin()], ignoreFn,
+                               idx_store.begin());
       size_type const max_num_nn = pc.dim() + 1 - _ah.size();
       nn = nearest_neighbor_along_ray(_location, ray, pc[*_ah.begin()], vf,
                                       nnvec.begin(),
