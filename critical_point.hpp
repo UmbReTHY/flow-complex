@@ -13,7 +13,6 @@
 #include <tbb/mutex.h>
 
 #include "utility.hpp"
-#include "makros.h"
 
 namespace FC {
 
@@ -133,8 +132,8 @@ public:
   }
   
   size_type index() const noexcept {
-    return (is_max_at_inf() ? _index : std::distance(_indices.cbegin(),
-                                                     _indices.cend()) - 1);
+    return (is_max_at_inf() ? _index :
+                              convertSafelyTo<size_type>(_indices.size()) - 1);
   }
 
 private:
@@ -151,8 +150,8 @@ private:
 };
 
 template <typename number_type, typename size_type>
-__pure bool operator==(critical_point<number_type, size_type> const& lhs,
-                       critical_point<number_type, size_type> const& rhs) {
+bool operator==(critical_point<number_type, size_type> const& lhs,
+                critical_point<number_type, size_type> const& rhs) {
   DCHECK(std::is_sorted(lhs.idx_begin(), lhs.idx_end()));
   DCHECK(std::is_sorted(rhs.idx_begin(), rhs.idx_end()));
   // we want to allow cps of different indices to be compared

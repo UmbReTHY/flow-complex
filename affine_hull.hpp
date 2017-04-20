@@ -12,6 +12,7 @@
 #include <Eigen/Core>
 
 #include "dynamic_qr.hpp"
+#include "utility.hpp"
 
 namespace FC {
 
@@ -98,7 +99,7 @@ public:
     @return the number of points 
   */
   size_type size() const {
-    return _members.size();
+    return convertSafelyTo<size_type>(_members.size());
   }
   
   const_iterator begin() const {
@@ -109,7 +110,7 @@ public:
     return _members.end();
   }
   
-  point_cloud_type const& pc() const noexcept {
+  const point_cloud_type & pc() const noexcept {
     return _pc;
   }
   
@@ -131,7 +132,7 @@ public:
 
 private:
   bool is_member(const_iterator it) const {
-    return (_members.begin() <= it) and (it < _members.end());
+    return (_members.begin() <= it) && (it < _members.end());
   }
 
   dynamic_qr<number_type> _dyn_qr;

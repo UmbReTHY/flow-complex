@@ -7,8 +7,6 @@
 
 #include <Eigen/Core>
 
-#include "makros.h"
-
 namespace FC {
 
 template <typename T>
@@ -43,12 +41,12 @@ public:
   
   bool operator==(circumsphere_ident const& rhs) const {
     assert(_support.size() == rhs._support.size());
-    return (_support.size() == rhs._support.size()) and
+    return (_support.size() == rhs._support.size()) &&
            std::equal(_support.begin(), _support.end(), rhs._support.begin());
   }
   
   bool operator!=(circumsphere_ident const& rhs) const {
-    return not operator==(rhs);
+    return !operator==(rhs);
   }
   
   const_iterator cbegin() const {
@@ -65,7 +63,7 @@ private:
 
 struct RangeHash {
   template <class Iterator>
-  __pure std::size_t operator()(Iterator begin, Iterator end) const {
+  std::size_t operator()(Iterator begin, Iterator end) const {
     assert(std::is_sorted(begin, end));
     // the code below is boost's hash_range - thx boost
     std::size_t seed = 0;
@@ -84,6 +82,13 @@ struct CIHash {
     return range_hash(ci.cbegin(), ci.cend());
   }
 };
+
+// routine for safe integer conversions
+template <typename TargetType, typename SourceType>
+TargetType convertSafelyTo(SourceType a) {
+  CHECK(a <= std::numeric_limits<TargetType>::max());
+  return static_cast<TargetType>(a);
+}
 
 }  // namespace FC
 

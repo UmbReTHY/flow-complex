@@ -4,6 +4,7 @@ add_executable(fc fc.cpp)
 target_link_libraries(fc ${TBB_LIBRARIES} glog::glog gflags)
 
 add_executable(perturb perturb.cpp)
+target_link_libraries(perturb glog::glog)
 
 add_executable(simplify simplify.cpp)
 target_link_libraries(simplify ${TBB_LIBRARIES} glog::glog)

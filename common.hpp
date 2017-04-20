@@ -4,8 +4,10 @@
 #include <cassert>
 
 #include <algorithm>
+#include <limits>
 #include <ostream>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -18,6 +20,7 @@
 #include "descend_task.hpp"
 #include "flow_complex.hpp"
 #include "update_ray.hpp"
+#include "utility.hpp"
 
 namespace FC {
 
@@ -37,9 +40,9 @@ Iterator get_cond_offsets(Eigen::MatrixBase<Derived> const& lambda,
                           Iterator cond_begin, Condition cond) {
   Iterator cond_end = cond_begin;
   using lambda_t = Eigen::MatrixBase<Derived>;
-  for (typename lambda_t::Index i = lambda.size(); i-- > 0;)
-    if (cond(lambda[i]))
-      *(cond_end++) = i;
+  using size_type = std::remove_reference<decltype(*cond_begin)>::type;
+  for (size_type i = convertSafelyTo<size_type>(lambda.size()); i-- > 0;)
+    if (cond(lambda[i])) *(cond_end++) = i;
   return cond_end;
 }
 
@@ -104,6 +107,7 @@ void spawn_sub_descends(DTHandler & dth,
   }
 }
 
+// helper routine for sanity checks
 template <typename PointCloud, typename Derived, typename AffineHull,
           typename IgnoreFn>
 bool ball_is_empty(const PointCloud& pc, const Eigen::MatrixBase<Derived>& x,

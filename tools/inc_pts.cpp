@@ -56,7 +56,7 @@ inc_map<nt, st> augment_inc_map(FC::critical_point<nt, st> const* cp,
     rpair.first->second.insert(idx);
   }   
   for (auto it = cp->succ_begin(); it != cp->succ_end(); ++it)
-    if (not (*it)->is_max_at_inf())
+    if (!(*it)->is_max_at_inf())
       im = augment_inc_map(*it, idx, std::move(im));
   return im;
 }

@@ -17,9 +17,9 @@ bool exists_path(critical_point<nt, st> const* from,
                  critical_point<nt, st> const* to) {
   using namespace std::placeholders;
   auto exists_path_to = std::bind(&exists_path<nt, st>, _1, to);
-  return to->index() > from->index() and
+  return to->index() > from->index() &&
          ((from->succ_end() !=
-          std::find(from->succ_begin(), from->succ_end(), to)) or
+          std::find(from->succ_begin(), from->succ_end(), to)) ||
           (from->succ_end() !=
           std::find_if(from->succ_begin(), from->succ_end(), exists_path_to))
          );
@@ -45,7 +45,7 @@ flow_complex<nt, st> clean_incidences(flow_complex<nt, st> fc) {
       for (auto to_it = cp.succ_begin(); to_it != cp.succ_end(); ++to_it)
         if (exists_path(*from_it, *to_it))
           redundant_succs.push_back(*to_it);
-    if (not redundant_succs.empty())
+    if (!redundant_succs.empty())
       to_delete.emplace(&cp, std::move(redundant_succs));
   }
   // clean the flow complex from redundant incidences

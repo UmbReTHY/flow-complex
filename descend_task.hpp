@@ -109,7 +109,7 @@ public:
       std::exit(EXIT_FAILURE);
     }
     auto & pos_offsets = idx_store;
-    if (nn.first == nnvec.begin() or nn.second > 1.0) {
+    if (nn.first == nnvec.begin() || nn.second > 1.0) {
       DLOG(INFO) << "DESCEND SUCCESSFUL\n";
       auto & x = driver;
       DCHECK(_ah.size() <= lambda.size());

@@ -1,31 +1,36 @@
 project(flow_complex)
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.1.3)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules)
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR
-    "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+set(CXX_STANDARD 11)
+set(CXX_STANDARD_REQUIRED ON)
+
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
+    ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+  if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     set (CMAKE_CXX_FLAGS "-fcolor-diagnostics")
   endif()
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
   set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set (CMAKE_CXX_FLAGS_RELEASE "-Wno-unused-parameter -DNDEBUG -O3")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_definitions(-DLOGGING)
   endif()
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
   # using Intel C++
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
   set (CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
   set (CMAKE_CXX_FLAGS_RELEASE "-Wno-unused-parameter -DNDEBUG -Ofast -mavx")
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -g")
   if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     add_definitions(-DLOGGING)
   endif()
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "[Mm]SVC")
   # using Visual Studio C++
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+  add_definitions(-DNOMINMAX)
 endif()
 
 option(BUILD_TESTS

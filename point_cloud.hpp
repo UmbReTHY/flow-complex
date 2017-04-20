@@ -10,7 +10,14 @@
 
 #include <gflags/gflags.h>
 #include <Eigen/Core>
-#include <nanoflann.hpp>
+#ifdef _MSC_VER
+  #pragma warning(push)
+  #pragma warning( disable : 4267)
+    #include <nanoflann.hpp>
+  #pragma warning(pop)
+#else
+  #include <nanoflann.hpp>
+#endif
 
 #include "utility.hpp"
 
@@ -66,7 +73,9 @@ using eigen_vector = Eigen::Matrix<_number_type, Eigen::Dynamic, 1>;
 using self_t = point_cloud<_number_type, _size_type, Aligned>;
 using DataAdaptor = NanoflannDataAdaptor<self_t>;
 using DistFunc = nanoflann::L2_Simple_Adaptor<_number_type, DataAdaptor>;
-using KDTree = nanoflann::KDTreeSingleIndexAdaptor<DistFunc, DataAdaptor>;
+using KDTree = nanoflann::KDTreeSingleIndexAdaptor<DistFunc, DataAdaptor,
+                          -1,  // dimension of the dataset: -1 == known at rt
+                          _size_type>;
 // forward declaration
 template <class Iterator> struct RadiusSearchResultSet;
 public:
@@ -95,14 +104,21 @@ public:
     _kd_tree->buildIndex();
     // compute diameter of dataset
     number_type sq_diameter = 0.0;
-    #pragma omp parallel for reduction(max:sq_diameter)
-    for (int i = 0; i < _points.size(); ++i) {
-      for (int j = i + 1; j < _points.size(); ++j) {
-        const auto& u = _points[i];
-        const auto& v = _points[j];
-        const number_type sq_distance = (u-v).squaredNorm();
-        if (sq_distance > sq_diameter) sq_diameter = sq_distance;
+    #pragma omp parallel
+    {
+      number_type my_sq_diameter = 0.0;
+      #pragma omp for schedule(guided, 100)
+      for (int i = 0; i < _points.size(); ++i) {
+        for (int j = i + 1; j < _points.size(); ++j) {
+          const auto& u = _points[i];
+          const auto& v = _points[j];
+          const number_type sq_distance = (u-v).squaredNorm();
+          if (sq_distance > my_sq_diameter) my_sq_diameter = sq_distance;
+        }
       }
+      // workaround: MSVC does not support reduction(max:sq_diameter)
+      #pragma omp critical (max_reduction)
+      if (my_sq_diameter > sq_diameter) sq_diameter = my_sq_diameter;
     }
     diameter_ = sqrt(sq_diameter);
   }
@@ -117,17 +133,17 @@ public:
 
   template <typename Index>
   eigen_map const& operator[](Index idx) const {
-    DCHECK(typename pt_cont::size_type(idx) < _points.size());
+    CHECK(typename pt_cont::size_type(idx) < _points.size());
     return _points[idx];
   }
   
   size_type dim() const noexcept {
-    assert(not _points.empty() && "YOU CREATED AN EMPTY POINT CLOUD.");
-    return _points[0].size();
+    CHECK(!_points.empty() && "YOU CREATED AN EMPTY POINT CLOUD.");
+    return convertSafelyTo<size_type>(_points[0].size());
   }
   
   size_type size() const noexcept {
-    return _points.size();
+    return convertSafelyTo<size_type>(_points.size());
   }
   
   number_type diameter() const {return diameter_;}

@@ -25,9 +25,9 @@ std::vector<nt> c_of_seb(Iterator begin, Iterator end,
 
 int main(int argc, char ** argv) {
   try {
-    using size_type = std::uint16_t;
+    using size_type = int;
     using float_t = double;
-    using ps_type = FC::point_store<float_t>;
+    using ps_type = FC::point_store<float_t, size_type>;
     using pc_type = FC::point_cloud<float_t, size_type, false>;
     using fc_type = FC::flow_complex<float_t, size_type>;
     // deal with program arguments
@@ -35,7 +35,7 @@ int main(int argc, char ** argv) {
       throw std::invalid_argument("usage: fc2pc <from_idx> <to_idx> <in_pc> <in_fc> <out_pc>");
     int from_idx = std::atoi(argv[1]);
     int to_idx = std::atoi(argv[2]);
-    if (to_idx < from_idx or from_idx < 0)
+    if (to_idx < from_idx || from_idx < 0)
       throw std::invalid_argument("invalid index range");
     // read point cloud
     ps_type in_ps;
@@ -54,11 +54,11 @@ int main(int argc, char ** argv) {
     // compute requested circum-centers
     ps_type out_ps;
     if (in_ps.size()) {
-      size_type const dim = in_ps[0].size();
+      const size_type dim = in_ps.dim();
       pc_type pc(in_ps.begin(), in_ps.end(), dim);
       for (auto const& cp : fc) {
-        if ((not cp.is_max_at_inf()) and
-            from_idx <= cp.index() and cp.index() <= to_idx) {
+        if ((!cp.is_max_at_inf()) &&
+            from_idx <= cp.index() && cp.index() <= to_idx) {
           out_ps.add_point(dim) = c_of_seb(cp.idx_begin(), cp.idx_end(), pc);
           // correctness check
           using ev = Eigen::Matrix<float_t, Eigen::Dynamic, 1>;

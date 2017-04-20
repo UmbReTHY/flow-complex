@@ -52,9 +52,9 @@ nearest_neighbor_along_ray(Eigen::MatrixBase<Derived1> const& x,
     if (tmp != 0.0) {
       number_type const t = (x.dot(q) - x_p + 0.5 * (p_p - q.dot(q))) / tmp;
       DLOG(INFO) << "t = " << t << " for id = " << q_idx << std::endl;
-      if (t > 0 and (r.first == begin or t <= r.second)) {
+      if (t > 0 && (r.first == begin || t <= r.second)) {
         DLOG(INFO) << "t-DIFF = " << (t - r.second) << std::endl;
-        if (r.first != begin and t == r.second) {
+        if (r.first != begin && t == r.second) {
           if (r.first == end)
             throw std::logic_error("too many nearest neighbors");
         } else {

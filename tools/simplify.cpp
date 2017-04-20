@@ -72,7 +72,7 @@ get_min_incidence(FC::flow_complex<nt, st> & fc) {
     nt const a_dist = std::sqrt(a.sq_dist());
     for (auto b_it = a.succ_begin(); b_it != a.succ_end(); ++b_it) {
       auto & b = **b_it;
-      if ((not b.is_max_at_inf()) and (1 == (b.index() - a.index()))) {
+      if ((! b.is_max_at_inf()) && (1 == (b.index() - a.index()))) {
         nt const ratio_ab = std::sqrt(b.sq_dist()) / a_dist;
         if (ratio_ab < min_ratio) {
           min_a = &a;

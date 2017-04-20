@@ -121,7 +121,7 @@ using self_t = flow_complex<_number_type, _size_type>;
     }
     
     size_type num_minima() const {
-      return _minima.size();
+      return convertSafelyTo<size_type>(_minima.size());
     }
     
     cp_type * find(cp_type const& cp) const {
@@ -141,9 +141,9 @@ template <typename nt, typename st>
 std::map<st, int> compute_hist(flow_complex<nt, st> const& fc) {
   std::map<st, int> hist;
   for (auto const& cp : fc) {
-    if (not cp.is_max_at_inf()) {
+    if (!cp.is_max_at_inf()) {
       auto r_pair = hist.emplace(cp.index(), 1);
-      if (not r_pair.second)
+      if (!r_pair.second)
         ++r_pair.first->second;
     }
   }
@@ -211,7 +211,7 @@ std::istream & operator>>(std::istream & is,
   auto parse_indices = [&] (std::string const& s, size_type start) {
     idxvec.clear();
     size_type end = s.find_first_of(DELIM, start);
-    if (not is_inf_line(s, start)) {
+    if (!is_inf_line(s, start)) {
       std::istringstream is(s.substr(start, end - start));
       st tmp;
       while (is >> tmp)
@@ -219,7 +219,7 @@ std::istream & operator>>(std::istream & is,
     }
     return end;
   };
-  auto parse_dist = [&dist] (std::string const& s, size_type start) {
+  auto parse_dist = [&dist, &DELIM] (std::string const& s, size_type start) {
     size_type end = s.find_first_of(DELIM, start);
     std::istringstream is(s.substr(start, end - start));
     is >> dist;
@@ -228,7 +228,7 @@ std::istream & operator>>(std::istream & is,
   // parsing loop
   while(std::getline(is, line)) {
     // skip empty and WS lines
-    if (line.empty() or std::string::npos == line.find_first_not_of(WS))
+    if (line.empty() || std::string::npos == line.find_first_not_of(WS))
       continue;
     if (is_inf_line(line)) {  // parse the cp at inf
       auto pos = line.find_first_not_of(WS);

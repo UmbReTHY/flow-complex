@@ -106,7 +106,7 @@ public:
     // there's only 2 cases of ascend tasks: completely new, and those starting
     // with d points on the boundary. The first case has not dropped yet, the
     // 2nd case has always dropped before
-    DCHECK(_ah.size() == 1 or _ah.size() == pc.dim());
+    DCHECK(_ah.size() == 1 || _ah.size() == pc.dim());
     auto nn = std::make_pair(nnvec.begin(), number_type(0));
     
     DLOG(INFO) << "ASCEND-TASK-STARTS\n";
@@ -292,7 +292,8 @@ private:
         update_ray<RAY_DIR::FROM_DRIVER>(new_ah, x, lambda, driver, tmp_ray);
         ray += tmp_ray;
       }
-      ray /= _dropped.size();
+      CHECK(_dropped.size() < std::numeric_limits<number_type>::max());
+      ray /= static_cast<number_type>(_dropped.size());
       // now perform the actual dropping on the used affine hull
       for (auto it = begin; it != neg_end; ++it)
         _ah.drop_point(_ah.begin() + *it);
