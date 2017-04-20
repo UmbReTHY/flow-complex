@@ -39,8 +39,7 @@ template <class Derived, class Iterator, class Condition>
 Iterator get_cond_offsets(Eigen::MatrixBase<Derived> const& lambda,
                           Iterator cond_begin, Condition cond) {
   Iterator cond_end = cond_begin;
-  using lambda_t = Eigen::MatrixBase<Derived>;
-  using size_type = std::remove_reference<decltype(*cond_begin)>::type;
+  using size_type = typename std::remove_reference<decltype(*cond_begin)>::type;
   for (size_type i = convertSafelyTo<size_type>(lambda.size()); i-- > 0;)
     if (cond(lambda[i])) *(cond_end++) = i;
   return cond_end;

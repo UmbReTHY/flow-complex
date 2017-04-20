@@ -108,8 +108,8 @@ public:
     {
       number_type my_sq_diameter = 0.0;
       #pragma omp for schedule(guided, 100)
-      for (int i = 0; i < _points.size(); ++i) {
-        for (int j = i + 1; j < _points.size(); ++j) {
+      for (int i = 0; i < this->size(); ++i) {
+        for (int j = i + 1; j < this->size(); ++j) {
           const auto& u = _points[i];
           const auto& v = _points[j];
           const number_type sq_distance = (u-v).squaredNorm();
