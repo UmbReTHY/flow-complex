@@ -63,10 +63,10 @@ public:
     
     std::copy(orig._r_raw, orig._r_raw + num_elements, _r_raw);
     
-    assert(num_rows() == orig.num_rows());
-    assert(num_cols() == orig.num_cols());
-    assert(_q == orig._q);
-    assert(std::equal(_r_raw, _r_raw + num_elements, orig._r_raw));
+    CHECK(num_rows() == orig.num_rows());
+    CHECK(num_cols() == orig.num_cols());
+    CHECK(_q == orig._q);
+    DCHECK(std::equal(_r_raw, _r_raw + num_elements, orig._r_raw));
   }
 
   // move-constructor
