@@ -23,7 +23,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "[Mm]SVC")
   # using Visual Studio C++
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
-  add_definitions(-DNOMINMAX)
+  add_definitions(-DNOMINMAX -D_SCL_SECURE_NO_WARNINGS)
 endif()
 
 option(BUILD_TESTS
@@ -32,7 +32,8 @@ option(BUILD_TESTS
 
 option(BUILD_EXAMPLES "" OFF)
 
-find_package (glog 0.3.4 REQUIRED)
+add_subdirectory(gflags)
+add_subdirectory(glog)
 find_package(Eigen3 REQUIRED)
 find_package(TBB REQUIRED)
 find_package(GooglePerfTools)
