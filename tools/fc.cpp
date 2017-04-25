@@ -17,6 +17,7 @@ DEFINE_string(point_cloud, "", "path to file containing a point cloud");
 DEFINE_bool(hist, false, "flag to toggle a print of the histogram of"
                          " computed critical points");
 DEFINE_int32(num_threads, -1, "number of threads to use");
+DEFINE_bool(bench, false, "only compute, but don't write to disk");
 
 int main(int argc, char ** argv) {
   google::InitGoogleLogging(argv[0]);
@@ -48,11 +49,13 @@ int main(int argc, char ** argv) {
     // cleansing
     fc = clean_incidences(std::move(fc));
     // printing
-    auto fc_filename = FLAGS_point_cloud + ".fc";
-    std::ofstream f(fc_filename);
-    if (!f)
-      throw std::runtime_error("could not write to file " + fc_filename);
-    f << fc;
+    if (!FLAGS_bench) {
+      auto fc_filename = FLAGS_point_cloud + ".fc";
+      std::ofstream f(fc_filename);
+      if (!f)
+        throw std::runtime_error("could not write to file " + fc_filename);
+      f << fc;
+    }
   } catch (std::exception & e) {
     std::cerr << e.what() << std::endl;
     return -1;
